@@ -5,8 +5,6 @@ import (
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	errs "github.com/H1ghN0on/go-tgbot-engine/errors"
-	hdl "github.com/H1ghN0on/go-tgbot-engine/handlers"
-	sm "github.com/H1ghN0on/go-tgbot-engine/statemachine"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -21,18 +19,28 @@ func (err BotError) Error() string {
 }
 
 type Client struct {
-	C                    *tgbotapi.BotAPI
-	Sm                   *sm.StateMachine
-	LastMessagesToRemove []bottypes.Message
+	cmdhandler           CommandHandler
+	api                  *tgbotapi.BotAPI
+	lastMessagesToRemove []bottypes.Message
 	keyboardMessage      bottypes.Message
 }
 
-type Bot struct {
-	Cmdhandler hdl.CommandHandler
-	Client     *Client
+type HandlerResponser interface {
+	GetMessages() []bottypes.Message
+	ShouldSwitchState() string
+	ShouldRemoveLast() bool
+	SetKeyboard() bool
 }
 
-func (bot *Bot) SendMessage(message bottypes.Message, shouldRemoveLastMessage bool, setKeyboard bool) error {
+type CommandHandlerResponser interface {
+	GetResponses() []HandlerResponser
+}
+
+type CommandHandler interface {
+	Handle(bottypes.Message) (CommandHandlerResponser, error)
+}
+
+func (bot *Client) SendMessage(message bottypes.Message, shouldRemoveLastMessage bool, setKeyboard bool) error {
 
 	var keyboard tgbotapi.InlineKeyboardMarkup
 
@@ -50,25 +58,25 @@ func (bot *Bot) SendMessage(message bottypes.Message, shouldRemoveLastMessage bo
 		msg.ReplyMarkup = keyboard
 	}
 
-	if setKeyboard && bot.Client.keyboardMessage.ID != 0 {
-		_, err := bot.Client.C.Request(tgbotapi.NewEditMessageReplyMarkup(bot.Client.keyboardMessage.ChatID, bot.Client.keyboardMessage.ID, keyboard))
+	if setKeyboard && bot.keyboardMessage.ID != 0 {
+		_, err := bot.api.Request(tgbotapi.NewEditMessageReplyMarkup(bot.keyboardMessage.ChatID, bot.keyboardMessage.ID, keyboard))
 		if err != nil {
 			panic(err.Error())
 		}
 		return nil
 	}
 
-	if !setKeyboard && bot.Client.keyboardMessage.ID != 0 {
-		bot.Client.keyboardMessage = bottypes.Message{}
+	if !setKeyboard && bot.keyboardMessage.ID != 0 {
+		bot.keyboardMessage = bottypes.Message{}
 	}
 
-	sent, err := bot.Client.C.Send(msg)
+	sent, err := bot.api.Send(msg)
 	if err != nil {
 		return BotError{code: errs.SendMessageError, message: "Send message error: " + err.Error()}
 	}
 
 	if shouldRemoveLastMessage {
-		bot.Client.LastMessagesToRemove = append(bot.Client.LastMessagesToRemove, bottypes.Message{
+		bot.lastMessagesToRemove = append(bot.lastMessagesToRemove, bottypes.Message{
 			ID:         sent.MessageID,
 			ChatID:     sent.Chat.ID,
 			Text:       message.Text,
@@ -77,7 +85,7 @@ func (bot *Bot) SendMessage(message bottypes.Message, shouldRemoveLastMessage bo
 	}
 
 	if setKeyboard {
-		bot.Client.keyboardMessage = bottypes.Message{
+		bot.keyboardMessage = bottypes.Message{
 			ID:     sent.MessageID,
 			ChatID: sent.Chat.ID,
 			Text:   sent.Text,
@@ -87,65 +95,78 @@ func (bot *Bot) SendMessage(message bottypes.Message, shouldRemoveLastMessage bo
 	return nil
 }
 
-func (bot *Bot) ListenMessages(update tgbotapi.Update) {
+func (client *Client) ListenMessages() {
 
-	var receivedMessage bottypes.Message
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
+	updates := client.api.GetUpdatesChan(u)
 
-	if update.Message != nil {
+	for update := range updates {
+		var receivedMessage bottypes.Message
 
-		receivedMessage = bottypes.Message{
-			ID:     update.Message.MessageID,
-			ChatID: update.Message.Chat.ID,
-			Text:   update.Message.Text,
-		}
+		if update.Message != nil {
 
-	} else if update.CallbackQuery != nil {
+			receivedMessage = bottypes.Message{
+				ID:     update.Message.MessageID,
+				ChatID: update.Message.Chat.ID,
+				Text:   update.Message.Text,
+			}
 
-		callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
-		if _, err := bot.Client.C.Request(callback); err != nil {
-			panic(err)
-		}
+		} else if update.CallbackQuery != nil {
 
-		receivedMessage = bottypes.Message{
-			ID:     update.CallbackQuery.Message.MessageID,
-			ChatID: update.CallbackQuery.Message.Chat.ID,
-			Text:   update.CallbackQuery.Data}
+			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
+			if _, err := client.api.Request(callback); err != nil {
+				panic(err)
+			}
 
-	} else {
-		panic("Unknown message received")
-	}
+			receivedMessage = bottypes.Message{
+				ID:     update.CallbackQuery.Message.MessageID,
+				ChatID: update.CallbackQuery.Message.Chat.ID,
+				Text:   update.CallbackQuery.Data}
 
-	handlerResult, err := bot.Cmdhandler.Handle(receivedMessage)
-
-	if err != nil {
-		var responseMessage bottypes.Message
-
-		responseMessage.ChatID = receivedMessage.ChatID
-		if errors.As(err, &errs.CommandHandlerError{}) {
-			responseMessage.Text = "Command handler error: " + err.Error()
-		} else if errors.As(err, &errs.StateMachineError{}) {
-			responseMessage.Text = "State machine error: " + err.Error()
 		} else {
-			responseMessage.Text = "Unknown error occured"
+			panic("Unknown message received")
 		}
 
-		err := bot.SendMessage(responseMessage, false, false)
+		handlerResult, err := client.cmdhandler.Handle(receivedMessage)
+
 		if err != nil {
-			panic(err)
-		}
-	} else {
-		for _, messageToRemove := range bot.Client.LastMessagesToRemove {
-			bot.Client.C.Request(tgbotapi.NewDeleteMessage(messageToRemove.ChatID, messageToRemove.ID))
-		}
-		bot.Client.LastMessagesToRemove = nil
+			var responseMessage bottypes.Message
 
-		for _, response := range handlerResult.Responses {
-			for _, v := range response.Messages {
-				err := bot.SendMessage(v, response.ShouldRemoveLast, response.SetKeyboard)
-				if err != nil {
-					panic(err)
+			responseMessage.ChatID = receivedMessage.ChatID
+			if errors.As(err, &errs.CommandHandlerError{}) {
+				responseMessage.Text = "Command handler error: " + err.Error()
+			} else if errors.As(err, &errs.StateMachineError{}) {
+				responseMessage.Text = "State machine error: " + err.Error()
+			} else {
+				responseMessage.Text = "Unknown error occured"
+			}
+
+			err := client.SendMessage(responseMessage, false, false)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			for _, messageToRemove := range client.lastMessagesToRemove {
+				client.api.Request(tgbotapi.NewDeleteMessage(messageToRemove.ChatID, messageToRemove.ID))
+			}
+			client.lastMessagesToRemove = nil
+
+			for _, response := range handlerResult.GetResponses() {
+				for _, v := range response.GetMessages() {
+					err := client.SendMessage(v, response.ShouldRemoveLast(), response.SetKeyboard())
+					if err != nil {
+						panic(err)
+					}
 				}
 			}
 		}
+	}
+}
+
+func NewClient(api *tgbotapi.BotAPI, ch CommandHandler) *Client {
+	return &Client{
+		cmdhandler: ch,
+		api:        api,
 	}
 }
