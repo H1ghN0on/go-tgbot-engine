@@ -120,7 +120,7 @@ func (bot *Bot) ListenMessages(update tgbotapi.Update) {
 	if err != nil {
 		var responseMessage bottypes.Message
 
-		responseMessage.ChatID = update.CallbackQuery.Message.Chat.ID
+		responseMessage.ChatID = receivedMessage.ChatID
 		if errors.As(err, &errs.CommandHandlerError{}) {
 			responseMessage.Text = "Command handler error: " + err.Error()
 		} else if errors.As(err, &errs.StateMachineError{}) {
