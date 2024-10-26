@@ -7,11 +7,17 @@ import (
 	errs "github.com/H1ghN0on/go-tgbot-engine/errors"
 )
 
+type Stater interface {
+	GetName() string
+	GetAvailableCommands() []string
+	GetAvailableStates() []Stater
+}
+
 type StateMachiner interface {
-	AddStates(states ...bottypes.State)
+	AddStates(states ...Stater)
 	SetStateByName(stateName string) error
-	SetState(state bottypes.State) error
-	GetActiveState() bottypes.State
+	SetState(state Stater) error
+	GetActiveState() Stater
 }
 
 func hasMultipleStatesInCommand(res CommandHandlerResponse) bool {
@@ -36,13 +42,9 @@ type CommandHandler struct {
 func (ch *CommandHandler) Handle(receivedMessage bottypes.Message) (CommandHandlerResponse, error) {
 	var res CommandHandlerResponse
 
-	if !slices.Contains(ch.sm.GetActiveState().AvailableCommands, bottypes.Command{Text: receivedMessage.Text}) {
+	if !slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), receivedMessage.Text) {
 		return CommandHandlerResponse{}, errs.CommandHandlerError{Code: errs.UnknownCommand, Message: "This command is not available "}
 	}
-
-	// if !ch.sm.GetActiveState().ContainsCommand(bottypes.Command{Text: receivedMessage.Text}) {
-	// 	return CommandHandlerResponse{}, errs.CommandHandlerError{Code: errs.UnknownCommand, Message: "This command is not available "}
-	// }
 
 	switch receivedMessage.Text {
 	case "/level_one":

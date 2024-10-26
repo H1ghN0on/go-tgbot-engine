@@ -96,7 +96,8 @@ func (bot *Bot) ListenMessages(update tgbotapi.Update) {
 		receivedMessage = bottypes.Message{
 			ID:     update.Message.MessageID,
 			ChatID: update.Message.Chat.ID,
-			Text:   update.Message.Text}
+			Text:   update.Message.Text,
+		}
 
 	} else if update.CallbackQuery != nil {
 

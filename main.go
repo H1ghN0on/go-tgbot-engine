@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
-	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
 	"github.com/H1ghN0on/go-tgbot-engine/statemachine"
 
@@ -22,36 +21,36 @@ func main() {
 
 	var sm statemachine.StateMachine
 
-	startState := bottypes.State{
+	startState := statemachine.State{
 		Name: "start-state",
-		AvailableCommands: []bottypes.Command{
-			{Text: "/level_one"},
-			{Text: "/level_two"},
-			{Text: "/level_three"},
-			{Text: "/show_commands"},
-			{Text: "/keyboard_start"},
-			{Text: "/create_error"},
-			{Text: "/level_four_start"},
-			{Text: "/big_messages"},
+		AvailableCommands: []string{
+			"/level_one",
+			"/level_two",
+			"/level_three",
+			"/show_commands",
+			"/keyboard_start",
+			"/create_error",
+			"/level_four_start",
+			"/big_messages",
 		},
 	}
 
-	levelFourState := bottypes.State{
+	levelFourState := statemachine.State{
 		Name: "level-four-state",
-		AvailableCommands: []bottypes.Command{
-			{Text: "/level_four_one"},
-			{Text: "/level_four_two"},
-			{Text: "/level_four_three"},
-			{Text: "/level_four_four"},
+		AvailableCommands: []string{
+			"/level_four_one",
+			"/level_four_two",
+			"/level_four_three",
+			"/level_four_four",
 		},
 	}
 
-	keyboardState := bottypes.State{
+	keyboardState := statemachine.State{
 		Name: "keyboard-state",
-		AvailableCommands: []bottypes.Command{
-			{Text: "/keyboard_one"},
-			{Text: "/keyboard_two"},
-			{Text: "/keyboard_three"},
+		AvailableCommands: []string{
+			"/keyboard_one",
+			"/keyboard_two",
+			"/keyboard_three",
 		},
 	}
 
