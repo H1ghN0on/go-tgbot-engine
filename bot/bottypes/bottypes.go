@@ -20,9 +20,3 @@ type Message struct {
 	Text       string
 	ButtonRows []ButtonRows
 }
-
-type State struct {
-	Name              string
-	AvailableCommands []Command
-	AvailableStates   []State
-}

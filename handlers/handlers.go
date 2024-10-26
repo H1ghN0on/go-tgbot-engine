@@ -7,37 +7,53 @@ type HandlerParams struct {
 }
 
 type HandlerResponse struct {
-	Messages          []bottypes.Message
-	ShouldSwitchState string
-	ShouldRemoveLast  bool
-	SetKeyboard       bool
+	messages          []bottypes.Message
+	shouldSwitchState string
+	shouldRemoveLast  bool
+	setKeyboard       bool
+}
+
+func (hr HandlerResponse) GetMessages() []bottypes.Message {
+	return hr.messages
+}
+
+func (hr HandlerResponse) ShouldSwitchState() string {
+	return hr.shouldSwitchState
+}
+
+func (hr HandlerResponse) ShouldRemoveLast() bool {
+	return hr.shouldRemoveLast
+}
+
+func (hr HandlerResponse) SetKeyboard() bool {
+	return hr.setKeyboard
 }
 
 func LevelOneHandler(params HandlerParams) HandlerResponse {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
-	res.Messages = append(res.Messages, bottypes.Message{ChatID: chatID, Text: "YOUR FINAL SIGHT!"})
+	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "YOUR FINAL SIGHT!"})
 
-	return HandlerResponse{Messages: res.Messages}
+	return HandlerResponse{messages: res.messages}
 }
 
 func LevelTwoHandler(params HandlerParams) HandlerResponse {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
-	res.Messages = append(res.Messages, bottypes.Message{ChatID: chatID, Text: "SEE AS I SEE!"})
+	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "SEE AS I SEE!"})
 
-	return HandlerResponse{Messages: res.Messages}
+	return HandlerResponse{messages: res.messages}
 }
 
 func LevelThreeHandler(params HandlerParams) HandlerResponse {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
-	res.Messages = append(res.Messages, bottypes.Message{ChatID: chatID, Text: "FEEL WITH ME!"})
+	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "FEEL WITH ME!"})
 
-	return HandlerResponse{Messages: res.Messages}
+	return HandlerResponse{messages: res.messages}
 }
 
 func ShowCommandsHandler(params HandlerParams) HandlerResponse {
@@ -68,7 +84,7 @@ func ShowCommandsHandler(params HandlerParams) HandlerResponse {
 
 	buttonRow4 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Big Messages", Command: bottypes.Command{Text: "/big_messages"}},
+			{ChatID: chatID, Text: "Big messages", Command: bottypes.Command{Text: "/big_messages"}},
 		},
 	}
 
@@ -79,9 +95,9 @@ func ShowCommandsHandler(params HandlerParams) HandlerResponse {
 	}
 
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3, buttonRow4, buttonRow5)
-	res.Messages = append(res.Messages, retMessage)
+	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{Messages: res.Messages, ShouldSwitchState: "start-state", ShouldRemoveLast: false}
+	return HandlerResponse{messages: res.messages, shouldSwitchState: "start-state", shouldRemoveLast: false}
 }
 
 func KeyboardStartHandler(params HandlerParams) HandlerResponse {
@@ -105,9 +121,9 @@ func KeyboardStartHandler(params HandlerParams) HandlerResponse {
 	}
 
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
-	res.Messages = append(res.Messages, retMessage)
+	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{Messages: res.Messages, ShouldSwitchState: "keyboard-state", SetKeyboard: true}
+	return HandlerResponse{messages: res.messages, shouldSwitchState: "keyboard-state", setKeyboard: true}
 }
 
 func KeyboardOneHandler(params HandlerParams) HandlerResponse {
@@ -131,9 +147,9 @@ func KeyboardOneHandler(params HandlerParams) HandlerResponse {
 	}
 
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
-	res.Messages = append(res.Messages, retMessage)
+	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{Messages: res.Messages, SetKeyboard: true}
+	return HandlerResponse{messages: res.messages, setKeyboard: true}
 }
 
 func KeyboardTwoHandler(params HandlerParams) HandlerResponse {
@@ -157,9 +173,9 @@ func KeyboardTwoHandler(params HandlerParams) HandlerResponse {
 	}
 
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
-	res.Messages = append(res.Messages, retMessage)
+	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{Messages: res.Messages, SetKeyboard: true}
+	return HandlerResponse{messages: res.messages, setKeyboard: true}
 }
 
 func KeyboardThreeHandler(params HandlerParams) HandlerResponse {
@@ -167,9 +183,9 @@ func KeyboardThreeHandler(params HandlerParams) HandlerResponse {
 	chatID := params.message.ChatID
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Alabama certified moment"}
-	res.Messages = append(res.Messages, retMessage)
+	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{Messages: res.Messages, ShouldSwitchState: "start-state", SetKeyboard: false}
+	return HandlerResponse{messages: res.messages, shouldSwitchState: "start-state", setKeyboard: false}
 }
 
 func LevelFourStartHandler(params HandlerParams) HandlerResponse {
@@ -184,9 +200,9 @@ func LevelFourStartHandler(params HandlerParams) HandlerResponse {
 		},
 	})
 
-	res.Messages = append(res.Messages, response)
+	res.messages = append(res.messages, response)
 
-	return HandlerResponse{Messages: res.Messages, ShouldSwitchState: "level-four-state"}
+	return HandlerResponse{messages: res.messages, shouldSwitchState: "level-four-state"}
 }
 
 func LevelFourOneHandler(params HandlerParams) HandlerResponse {
@@ -201,9 +217,9 @@ func LevelFourOneHandler(params HandlerParams) HandlerResponse {
 		},
 	})
 
-	res.Messages = append(res.Messages, response)
+	res.messages = append(res.messages, response)
 
-	return HandlerResponse{Messages: res.Messages}
+	return HandlerResponse{messages: res.messages}
 }
 
 func LevelFourTwoHandler(params HandlerParams) HandlerResponse {
@@ -218,9 +234,9 @@ func LevelFourTwoHandler(params HandlerParams) HandlerResponse {
 		},
 	})
 
-	res.Messages = append(res.Messages, response)
+	res.messages = append(res.messages, response)
 
-	return HandlerResponse{Messages: res.Messages}
+	return HandlerResponse{messages: res.messages}
 }
 
 func LevelFourThreeHandler(params HandlerParams) HandlerResponse {
@@ -235,27 +251,27 @@ func LevelFourThreeHandler(params HandlerParams) HandlerResponse {
 		},
 	})
 
-	res.Messages = append(res.Messages, response)
+	res.messages = append(res.messages, response)
 
-	return HandlerResponse{Messages: res.Messages}
+	return HandlerResponse{messages: res.messages}
 }
 
 func LevelFourFourHandler(params HandlerParams) HandlerResponse {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
-	res.Messages = append(res.Messages, bottypes.Message{ChatID: chatID, Text: "FOUR!"})
+	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "FOUR!"})
 
-	return HandlerResponse{Messages: res.Messages, ShouldSwitchState: "start-state"}
+	return HandlerResponse{messages: res.messages, shouldSwitchState: "start-state"}
 }
 
 func BigMessagesHandler(params HandlerParams) HandlerResponse {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
-	res.Messages = append(res.Messages, bottypes.Message{ChatID: chatID, Text: "Давно выяснено, что при оценке дизайна и композиции читаемый текст мешает сосредоточиться. Lorem Ipsum используют потому, что тот обеспечивает более или менее стандартное заполнение шаблона, а также реальное распределение букв и пробелов в абзацах, которое не получается при простой дубликации 'Здесь ваш текст.. Здесь ваш текст.. Здесь ваш текст..' Многие программы электронной вёрстки и редакторы HTML используют Lorem Ipsum в качестве текста по умолчанию, так что поиск по ключевым словам 'lorem ipsum' сразу показывает, как много веб-страниц всё ещё дожидаются своего настоящего рождения. За прошедшие годы текст Lorem Ipsum получил много версий. Некоторые версии появились по ошибке, некоторые - намеренно (например, юмористические варианты)."})
-	res.Messages = append(res.Messages, bottypes.Message{ChatID: chatID, Text: "Давно выяснено, что при оценке дизайна и композиции читаемый текст мешает сосредоточиться. Lorem Ipsum используют потому, что тот обеспечивает более или менее стандартное заполнение шаблона, а также реальное распределение букв и пробелов в абзацах, которое не получается при простой дубликации 'Здесь ваш текст.. Здесь ваш текст.. Здесь ваш текст..' Многие программы электронной вёрстки и редакторы HTML используют Lorem Ipsum в качестве текста по умолчанию, так что поиск по ключевым словам 'lorem ipsum' сразу показывает, как много веб-страниц всё ещё дожидаются своего настоящего рождения. За прошедшие годы текст Lorem Ipsum получил много версий. Некоторые версии появились по ошибке, некоторые - намеренно (например, юмористические варианты)."})
-	res.Messages = append(res.Messages, bottypes.Message{ChatID: chatID, Text: "Давно выяснено, что при оценке дизайна и композиции читаемый текст мешает сосредоточиться. Lorem Ipsum используют потому, что тот обеспечивает более или менее стандартное заполнение шаблона, а также реальное распределение букв и пробелов в абзацах, которое не получается при простой дубликации 'Здесь ваш текст.. Здесь ваш текст.. Здесь ваш текст..' Многие программы электронной вёрстки и редакторы HTML используют Lorem Ipsum в качестве текста по умолчанию, так что поиск по ключевым словам 'lorem ipsum' сразу показывает, как много веб-страниц всё ещё дожидаются своего настоящего рождения. За прошедшие годы текст Lorem Ipsum получил много версий. Некоторые версии появились по ошибке, некоторые - намеренно (например, юмористические варианты)."})
+	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "Давно выяснено, что при оценке дизайна и композиции читаемый текст мешает сосредоточиться. Lorem Ipsum используют потому, что тот обеспечивает более или менее стандартное заполнение шаблона, а также реальное распределение букв и пробелов в абзацах, которое не получается при простой дубликации 'Здесь ваш текст.. Здесь ваш текст.. Здесь ваш текст..' Многие программы электронной вёрстки и редакторы HTML используют Lorem Ipsum в качестве текста по умолчанию, так что поиск по ключевым словам 'lorem ipsum' сразу показывает, как много веб-страниц всё ещё дожидаются своего настоящего рождения. За прошедшие годы текст Lorem Ipsum получил много версий. Некоторые версии появились по ошибке, некоторые - намеренно (например, юмористические варианты)."})
+	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "Давно выяснено, что при оценке дизайна и композиции читаемый текст мешает сосредоточиться. Lorem Ipsum используют потому, что тот обеспечивает более или менее стандартное заполнение шаблона, а также реальное распределение букв и пробелов в абзацах, которое не получается при простой дубликации 'Здесь ваш текст.. Здесь ваш текст.. Здесь ваш текст..' Многие программы электронной вёрстки и редакторы HTML используют Lorem Ipsum в качестве текста по умолчанию, так что поиск по ключевым словам 'lorem ipsum' сразу показывает, как много веб-страниц всё ещё дожидаются своего настоящего рождения. За прошедшие годы текст Lorem Ipsum получил много версий. Некоторые версии появились по ошибке, некоторые - намеренно (например, юмористические варианты)."})
+	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "Давно выяснено, что при оценке дизайна и композиции читаемый текст мешает сосредоточиться. Lorem Ipsum используют потому, что тот обеспечивает более или менее стандартное заполнение шаблона, а также реальное распределение букв и пробелов в абзацах, которое не получается при простой дубликации 'Здесь ваш текст.. Здесь ваш текст.. Здесь ваш текст..' Многие программы электронной вёрстки и редакторы HTML используют Lorem Ipsum в качестве текста по умолчанию, так что поиск по ключевым словам 'lorem ipsum' сразу показывает, как много веб-страниц всё ещё дожидаются своего настоящего рождения. За прошедшие годы текст Lorem Ipsum получил много версий. Некоторые версии появились по ошибке, некоторые - намеренно (например, юмористические варианты)."})
 
-	return HandlerResponse{Messages: res.Messages, ShouldSwitchState: "start-state"}
+	return HandlerResponse{messages: res.messages, shouldSwitchState: "start-state"}
 }

@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
-	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
 	"github.com/H1ghN0on/go-tgbot-engine/statemachine"
 
@@ -14,56 +12,53 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func main() {
+func configurateStateMachine(sm *statemachine.StateMachine) {
+	startState := statemachine.NewState(
+		"start-state",
 
-	if err := godotenv.Load(); err != nil {
-		panic("No .env file found")
-	}
+		"/level_one",
+		"/level_two",
+		"/level_three",
+		"/show_commands",
+		"/keyboard_start",
+		"/create_error",
+		"/level_four_start",
+		"/big_messages",
+	)
 
-	var sm statemachine.StateMachine
+	levelFourState := statemachine.NewState(
+		"level-four-state",
 
-	startState := bottypes.State{
-		Name: "start-state",
-		AvailableCommands: []bottypes.Command{
-			{Text: "/level_one"},
-			{Text: "/level_two"},
-			{Text: "/level_three"},
-			{Text: "/show_commands"},
-			{Text: "/keyboard_start"},
-			{Text: "/create_error"},
-			{Text: "/level_four_start"},
-			{Text: "/big_messages"},
-		},
-	}
+		"/level_four_one",
+		"/level_four_two",
+		"/level_four_three",
+		"/level_four_four",
+	)
 
-	levelFourState := bottypes.State{
-		Name: "level-four-state",
-		AvailableCommands: []bottypes.Command{
-			{Text: "/level_four_one"},
-			{Text: "/level_four_two"},
-			{Text: "/level_four_three"},
-			{Text: "/level_four_four"},
-		},
-	}
+	keyboardState := statemachine.NewState(
+		"keyboard-state",
 
-	keyboardState := bottypes.State{
-		Name: "keyboard-state",
-		AvailableCommands: []bottypes.Command{
-			{Text: "/keyboard_one"},
-			{Text: "/keyboard_two"},
-			{Text: "/keyboard_three"},
-		},
-	}
+		"/keyboard_one",
+		"/keyboard_two",
+		"/keyboard_three",
+	)
 
-	startState.AvailableStates = append(startState.AvailableStates, levelFourState, keyboardState)
-	levelFourState.AvailableStates = append(levelFourState.AvailableStates, startState)
-	keyboardState.AvailableStates = append(keyboardState.AvailableStates, startState)
+	startState.SetAvailableStates(*levelFourState, *keyboardState)
+	levelFourState.SetAvailableStates(*startState)
+	keyboardState.SetAvailableStates(*startState)
 
-	sm.AddStates(startState, levelFourState, keyboardState)
+	sm.AddStates(*startState, *levelFourState, *keyboardState)
 
 	err := sm.SetStateByName("start-state")
 	if err != nil {
 		panic(err.Error())
+	}
+}
+
+func main() {
+
+	if err := godotenv.Load(); err != nil {
+		panic("No .env file found")
 	}
 
 	tgBotKey, exists := os.LookupEnv("TELEGRAM_BOT_API")
@@ -71,23 +66,17 @@ func main() {
 		panic(".env does not contain TELEGRAM_BOT_API")
 	}
 	botAPI, err := tgbotapi.NewBotAPI(tgBotKey)
-
 	if err != nil {
-		fmt.Println("pizdec")
+		panic(err.Error())
 	}
 
-	client := bot.Client{C: botAPI, Sm: &sm}
-	bot := &bot.Bot{
-		Cmdhandler: handlers.NewCommandHandler(&sm),
-		Client:     &client,
-	}
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
-	updates := client.C.GetUpdatesChan(u)
+	var sm statemachine.StateMachine
+	configurateStateMachine(&sm)
 
-	for update := range updates {
-		bot.ListenMessages(update)
-	}
+	commandHandler := handlers.NewCommandHandler(&sm)
+
+	client := bot.NewClient(botAPI, commandHandler)
+	client.ListenMessages()
 }
 
 // Реализация кнопки назад через запоминание всех постов, что привязано к командному хэндлеру
