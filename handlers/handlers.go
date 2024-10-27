@@ -1,15 +1,29 @@
 package handlers
 
-import "github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+import (
+	"slices"
+
+	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+)
+
+const (
+	StateBackable = iota
+	CommandBackable
+	RemovableByTrigger
+	Keyboardable
+	RemoveTriggerer
+)
 
 type HandlerParams struct {
 	message bottypes.Message
 }
 
 type HandlerResponse struct {
-	messages   []bottypes.Message
-	nextState  string
-	isKeyboard bool
+	messages             []bottypes.Message
+	nextState            string
+	isKeyboard           bool
+	isRemovableByTrigger bool
+	isRemoveTriggered    bool
 }
 
 func (hr HandlerResponse) GetMessages() []bottypes.Message {
@@ -22,6 +36,46 @@ func (hr HandlerResponse) NextState() string {
 
 func (hr HandlerResponse) IsKeyboard() bool {
 	return hr.isKeyboard
+}
+
+func (hr HandlerResponse) IsRemovableByTrigger() bool {
+	return hr.isRemovableByTrigger
+}
+
+func ModifyHandler(handler func(params HandlerParams) HandlerResponse, params HandlerParams, modifiers []int) HandlerResponse {
+	response := handler(params)
+	for idx, message := range response.messages {
+
+		if slices.Contains(modifiers, StateBackable) {
+			response.messages[idx].ButtonRows = append(response.messages[idx].ButtonRows, bottypes.ButtonRows{
+				Buttons: []bottypes.Button{
+					{ChatID: message.ChatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
+				},
+			})
+		}
+
+		if slices.Contains(modifiers, CommandBackable) {
+			response.messages[idx].ButtonRows = append(response.messages[idx].ButtonRows, bottypes.ButtonRows{
+				Buttons: []bottypes.Button{
+					{ChatID: message.ChatID, Text: "Back", Command: bottypes.Command{Text: "/back_command"}},
+				},
+			})
+		}
+	}
+
+	if slices.Contains(modifiers, RemovableByTrigger) {
+		response.isRemovableByTrigger = true
+	}
+
+	if slices.Contains(modifiers, Keyboardable) {
+		response.isKeyboard = true
+	}
+
+	if slices.Contains(modifiers, RemoveTriggerer) {
+		response.isRemoveTriggered = true
+	}
+
+	return response
 }
 
 func LevelOneHandler(params HandlerParams) HandlerResponse {
@@ -118,7 +172,7 @@ func KeyboardStartHandler(params HandlerParams) HandlerResponse {
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages, nextState: "keyboard-state", isKeyboard: true}
+	return HandlerResponse{messages: res.messages, nextState: "keyboard-state"}
 }
 
 func KeyboardOneHandler(params HandlerParams) HandlerResponse {
@@ -144,7 +198,7 @@ func KeyboardOneHandler(params HandlerParams) HandlerResponse {
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages, isKeyboard: true}
+	return HandlerResponse{messages: res.messages}
 }
 
 func KeyboardTwoHandler(params HandlerParams) HandlerResponse {
@@ -170,7 +224,7 @@ func KeyboardTwoHandler(params HandlerParams) HandlerResponse {
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages, isKeyboard: true}
+	return HandlerResponse{messages: res.messages}
 }
 
 func KeyboardThreeHandler(params HandlerParams) HandlerResponse {

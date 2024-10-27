@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 
@@ -17,23 +18,32 @@ func (err BotError) Error() string {
 }
 
 type Client struct {
-	cmdhandler  CommandHandler
-	api         *tgbotapi.BotAPI
-	lastMessage bottypes.Message
+	cmdhandler       CommandHandler
+	api              *tgbotapi.BotAPI
+	lastMessage      bottypes.Message
+	messagesToRemove []bottypes.Message
 }
 
 type HandlerResponser interface {
 	GetMessages() []bottypes.Message
 	NextState() string
 	IsKeyboard() bool
+	IsRemovableByTrigger() bool
+}
+
+type CommandHandlerRequester interface {
+	GetMessage() bottypes.Message
+	ShouldUpdateQueue() bool
 }
 
 type CommandHandlerResponser interface {
 	GetResponses() []HandlerResponser
+	TriggerRemove() bool
 }
 
 type CommandHandler interface {
-	Handle(bottypes.Message) (CommandHandlerResponser, error)
+	NewCommandHandlerRequest(msg bottypes.Message, shouldUpdateQueue bool) CommandHandlerRequester
+	Handle(req CommandHandlerRequester) (CommandHandlerResponser, error)
 }
 
 func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.Message, int64, error) {
@@ -71,7 +81,13 @@ func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.Message, in
 	return receivedMessage, chatID, nil
 }
 
-func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool) error {
+func (client Client) compareMessages(a bottypes.Message) func(bottypes.Message) bool {
+	return func(b bottypes.Message) bool {
+		return a.ChatID == b.ChatID
+	}
+}
+
+func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isRemovableByTrigger bool) error {
 
 	var keyboard tgbotapi.InlineKeyboardMarkup
 
@@ -101,6 +117,11 @@ func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool) err
 				panic(err.Error())
 			}
 		}
+
+		if isRemovableByTrigger && !slices.ContainsFunc(client.messagesToRemove, client.compareMessages(client.lastMessage)) {
+			client.messagesToRemove = append(client.messagesToRemove, client.lastMessage)
+		}
+
 		return nil
 	}
 
@@ -115,6 +136,10 @@ func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool) err
 		Text:   sent.Text,
 	}
 
+	if isRemovableByTrigger {
+		client.messagesToRemove = append(client.messagesToRemove, client.lastMessage)
+	}
+
 	return nil
 }
 
@@ -127,10 +152,42 @@ func (client *Client) sendErrorMessage(chatID int64, err error) {
 	responseMessage.ChatID = chatID
 	responseMessage.Text = err.Error()
 
-	sendErr := client.SendMessage(responseMessage, false)
+	sendErr := client.SendMessage(responseMessage, false, false)
 	if sendErr != nil {
 		panic(sendErr)
 	}
+}
+
+func (client *Client) removeMessagesByTrigger() error {
+	defer func() {
+		client.messagesToRemove = nil
+	}()
+
+	// Reverse or not to reverse...
+
+	// for i := len(client.messagesToRemove) - 1; i >= 0; i-- {
+	// 	msgToDelete := tgbotapi.DeleteMessageConfig{
+	// 		ChatID:    client.messagesToRemove[i].ChatID,
+	// 		MessageID: client.messagesToRemove[i].ID,
+	// 	}
+	// 	_, err := client.api.Request(msgToDelete)
+	// 	if err != nil {
+	// 		return fmt.Errorf("remove error: %w", err)
+	// 	}
+	// }
+
+	for _, v := range client.messagesToRemove {
+		msgToDelete := tgbotapi.DeleteMessageConfig{
+			ChatID:    v.ChatID,
+			MessageID: v.ID,
+		}
+		_, err := client.api.Request(msgToDelete)
+		if err != nil {
+			return fmt.Errorf("remove error: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (client *Client) ListenMessages() {
@@ -148,7 +205,8 @@ func (client *Client) ListenMessages() {
 			continue
 		}
 
-		handlerResult, err := client.cmdhandler.Handle(receivedMessage)
+		req := client.cmdhandler.NewCommandHandlerRequest(receivedMessage, true)
+		handlerResult, err := client.cmdhandler.Handle(req)
 		if err != nil {
 			client.sendErrorMessage(chatID, fmt.Errorf("handle command error: %w", err))
 			continue
@@ -156,10 +214,17 @@ func (client *Client) ListenMessages() {
 
 		for _, response := range handlerResult.GetResponses() {
 			for _, v := range response.GetMessages() {
-				err := client.SendMessage(v, response.IsKeyboard())
+				err := client.SendMessage(v, response.IsKeyboard(), response.IsRemovableByTrigger())
 				if err != nil {
 					panic(err)
 				}
+			}
+		}
+
+		if handlerResult.TriggerRemove() {
+			err := client.removeMessagesByTrigger()
+			if err != nil {
+				panic(err)
 			}
 		}
 	}
