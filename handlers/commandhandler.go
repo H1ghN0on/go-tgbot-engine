@@ -10,6 +10,7 @@ import (
 
 type Stater interface {
 	GetName() string
+	GetStartCommand() string
 	GetAvailableCommands() []string
 	GetAvailableStates() []Stater
 }
@@ -19,6 +20,7 @@ type StateMachiner interface {
 	SetStateByName(stateName string) error
 	SetState(state Stater) error
 	GetActiveState() Stater
+	GetPreviousState() Stater
 }
 
 func hasMultipleStatesInCommand(res CommandHandlerResponse) bool {
@@ -114,10 +116,26 @@ func (ch *CommandHandler) Handle(receivedMessage bottypes.Message) (bot.CommandH
 		handleRes := KeyboardThreeHandler(HandlerParams{message: receivedMessage})
 		showHandleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, handleRes, showHandleRes)
+	case "/command_back":
+		handleRes := BackHandler(HandlerParams{message: receivedMessage})
+		res.responses = append(res.responses, handleRes, handleRes)
+	case "/state_back":
+		previousState := ch.sm.GetPreviousState()
+		if previousState.GetName() == "" {
+			return CommandHandlerResponse{}, CommandHandlerError{message: "can not return to previous state"}
+		}
+		ch.sm.SetState(previousState)
+		receivedMessageBack := receivedMessage
+		receivedMessageBack.Text = previousState.GetStartCommand()
+		res, err := ch.Handle(receivedMessageBack)
+		if err != nil {
+			return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back error: %w", err).Error()}
+		}
+		return res, nil
 	case "/create_error":
-		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown "}
+		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown"}
 	default:
-		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown "}
+		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown"}
 	}
 
 	if hasMultipleStatesInCommand(res) {

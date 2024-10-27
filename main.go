@@ -16,6 +16,8 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 	startState := statemachine.NewState(
 		"start-state",
 
+		"/show_commands",
+
 		"/level_one",
 		"/level_two",
 		"/level_three",
@@ -30,13 +32,18 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		"level-four-state",
 
 		"/level_four_one",
+
+		"/level_four_one",
 		"/level_four_two",
 		"/level_four_three",
 		"/level_four_four",
+		"/state_back",
 	)
 
 	keyboardState := statemachine.NewState(
 		"keyboard-state",
+
+		"/keyboard_one",
 
 		"/keyboard_one",
 		"/keyboard_two",
@@ -78,5 +85,3 @@ func main() {
 	client := bot.NewClient(botAPI, commandHandler)
 	client.ListenMessages()
 }
-
-// Реализация кнопки назад через запоминание всех постов, что привязано к командному хэндлеру

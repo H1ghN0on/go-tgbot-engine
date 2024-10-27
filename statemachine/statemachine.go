@@ -9,12 +9,14 @@ import (
 type Command string
 
 type StateMachine struct {
-	activeState State
-	states      []State
+	activeState   State
+	previousState State
+	states        []State
 }
 
 type State struct {
 	name              string
+	startCommand      string
 	availableCommands []string
 	availableStates   []State
 }
@@ -25,6 +27,10 @@ type StateMachineError struct {
 
 func (err StateMachineError) Error() string {
 	return err.message
+}
+
+func (state State) GetStartCommand() string {
+	return state.startCommand
 }
 
 func (state State) GetName() string {
@@ -50,9 +56,10 @@ func (state *State) SetAvailableStates(newStates ...handlers.Stater) {
 	}
 }
 
-func NewState(name string, availableCommands ...string) *State {
+func NewState(name string, startCommand string, availableCommands ...string) *State {
 	return &State{
 		name:              name,
+		startCommand:      startCommand,
 		availableCommands: availableCommands,
 	}
 }
@@ -90,6 +97,7 @@ func (sm *StateMachine) SetState(state handlers.Stater) error {
 	if sm.activeState.GetName() == "" ||
 		sm.activeState.GetName() == state.GetName() ||
 		slices.ContainsFunc(sm.activeState.availableStates, sm.CompareStates(sm.states[idx])) {
+		sm.previousState = sm.activeState
 		sm.activeState = sm.states[idx]
 		return nil
 	}
@@ -98,4 +106,8 @@ func (sm *StateMachine) SetState(state handlers.Stater) error {
 
 func (sm *StateMachine) GetActiveState() handlers.Stater {
 	return sm.activeState
+}
+
+func (sm *StateMachine) GetPreviousState() handlers.Stater {
+	return sm.previousState
 }
