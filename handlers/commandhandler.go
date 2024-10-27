@@ -174,16 +174,16 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 		showHandleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, levelhandleRes, showHandleRes)
 	case "/level_four_start":
-		levelhandleRes := LevelFourStartHandler(HandlerParams{message: receivedMessage})
+		levelhandleRes := MakeStateBackable(LevelFourStartHandler, HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, levelhandleRes)
 	case "/level_four_one":
-		levelhandleRes := LevelFourOneHandler(HandlerParams{message: receivedMessage})
+		levelhandleRes := MakeStateBackable(LevelFourOneHandler, HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, levelhandleRes)
 	case "/level_four_two":
-		levelhandleRes := LevelFourTwoHandler(HandlerParams{message: receivedMessage})
+		levelhandleRes := MakeStateBackable(LevelFourTwoHandler, HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, levelhandleRes)
 	case "/level_four_three":
-		levelhandleRes := LevelFourThreeHandler(HandlerParams{message: receivedMessage})
+		levelhandleRes := MakeStateBackable(LevelFourThreeHandler, HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, levelhandleRes)
 	case "/level_four_four":
 		levelhandleRes := LevelFourFourHandler(HandlerParams{message: receivedMessage})
@@ -197,13 +197,13 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 		handleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, handleRes)
 	case "/keyboard_start":
-		handleRes := KeyboardStartHandler(HandlerParams{message: receivedMessage})
+		handleRes := MakeStateBackable(KeyboardStartHandler, HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, handleRes)
 	case "/keyboard_one":
-		handleRes := KeyboardOneHandler(HandlerParams{message: receivedMessage})
+		handleRes := MakeCommandBackable(KeyboardOneHandler, HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, handleRes)
 	case "/keyboard_two":
-		handleRes := KeyboardTwoHandler(HandlerParams{message: receivedMessage})
+		handleRes := MakeCommandBackable(KeyboardTwoHandler, HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, handleRes)
 	case "/keyboard_three":
 		handleRes := KeyboardThreeHandler(HandlerParams{message: receivedMessage})

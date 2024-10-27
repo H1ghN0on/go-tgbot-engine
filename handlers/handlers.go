@@ -24,6 +24,31 @@ func (hr HandlerResponse) IsKeyboard() bool {
 	return hr.isKeyboard
 }
 
+func MakeCommandBackable(handler func(params HandlerParams) HandlerResponse, params HandlerParams) HandlerResponse {
+	response := handler(params)
+	for idx, message := range response.messages {
+		response.messages[idx].ButtonRows = append(response.messages[idx].ButtonRows, bottypes.ButtonRows{
+			Buttons: []bottypes.Button{
+				{ChatID: message.ChatID, Text: "Back", Command: bottypes.Command{Text: "/back_command"}},
+			},
+		})
+	}
+
+	return response
+}
+
+func MakeStateBackable(handler func(params HandlerParams) HandlerResponse, params HandlerParams) HandlerResponse {
+	response := handler(params)
+	for idx, message := range response.messages {
+		response.messages[idx].ButtonRows = append(response.messages[idx].ButtonRows, bottypes.ButtonRows{
+			Buttons: []bottypes.Button{
+				{ChatID: message.ChatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
+			},
+		})
+	}
+	return response
+}
+
 func LevelOneHandler(params HandlerParams) HandlerResponse {
 	var res HandlerResponse
 
@@ -115,13 +140,7 @@ func KeyboardStartHandler(params HandlerParams) HandlerResponse {
 		},
 	}
 
-	buttonRow3 := bottypes.ButtonRows{
-		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
-		},
-	}
-
-	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3)
+	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
 	res.messages = append(res.messages, retMessage)
 
 	return HandlerResponse{messages: res.messages, nextState: "keyboard-state", isKeyboard: true}
@@ -147,13 +166,7 @@ func KeyboardOneHandler(params HandlerParams) HandlerResponse {
 		},
 	}
 
-	buttonRow3 := bottypes.ButtonRows{
-		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_command"}},
-		},
-	}
-
-	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3)
+	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
 	res.messages = append(res.messages, retMessage)
 
 	return HandlerResponse{messages: res.messages, isKeyboard: true}
@@ -179,13 +192,7 @@ func KeyboardTwoHandler(params HandlerParams) HandlerResponse {
 		},
 	}
 
-	buttonRow3 := bottypes.ButtonRows{
-		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_command"}},
-		},
-	}
-
-	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3)
+	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
 	res.messages = append(res.messages, retMessage)
 
 	return HandlerResponse{messages: res.messages, isKeyboard: true}
@@ -213,12 +220,6 @@ func LevelFourStartHandler(params HandlerParams) HandlerResponse {
 		},
 	})
 
-	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
-		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
-		},
-	})
-
 	res.messages = append(res.messages, response)
 
 	return HandlerResponse{messages: res.messages, nextState: "level-four-state"}
@@ -233,12 +234,6 @@ func LevelFourOneHandler(params HandlerParams) HandlerResponse {
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
 			{ChatID: chatID, Text: "TWO", Command: bottypes.Command{Text: "/level_four_two"}},
-		},
-	})
-
-	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
-		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
 		},
 	})
 
@@ -259,12 +254,6 @@ func LevelFourTwoHandler(params HandlerParams) HandlerResponse {
 		},
 	})
 
-	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
-		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
-		},
-	})
-
 	res.messages = append(res.messages, response)
 
 	return HandlerResponse{messages: res.messages}
@@ -279,12 +268,6 @@ func LevelFourThreeHandler(params HandlerParams) HandlerResponse {
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
 			{ChatID: chatID, Text: "FOUR", Command: bottypes.Command{Text: "/level_four_four"}},
-		},
-	})
-
-	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
-		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
 		},
 	})
 
