@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
@@ -32,6 +33,23 @@ func hasMultipleStatesInCommand(res CommandHandlerResponse) bool {
 	}
 
 	return len(statesSet) > 1
+}
+
+type GlobalStater interface {
+	GetName() string
+	GetSurname() string
+	GetAge() int
+
+	SetName(name string)
+	SetSurname(surname string)
+	SetAge(age int)
+}
+
+type Handlerable interface {
+	GetCommands() []string
+	InitHandler()
+	Handle(command string, params HandlerParams) ([]HandlerResponse, bool)
+	DeinitHandler()
 }
 
 type CommandHandlerError struct {
@@ -75,7 +93,10 @@ func (chr CommandHandlerResponse) TriggerRemove() bool {
 
 type CommandHandler struct {
 	sm            StateMachiner
+	gs            GlobalStater
 	commandsQueue []string
+	handlers      []Handlerable
+	activeHandler Handlerable
 }
 
 func (ch *CommandHandler) updateCommandsQueue(command string) {
@@ -164,103 +185,109 @@ func (ch *CommandHandler) handleBackCommandRequest(req bot.CommandHandlerRequest
 	return res, nil
 }
 
+func (ch *CommandHandler) checkCommandInState(command string) bool {
+	return !slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), command) &&
+		!(slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), "*") && !strings.HasPrefix(command, "/"))
+}
+
+func (ch *CommandHandler) moveToAnotherState(message bottypes.Message) []HandlerResponse {
+
+	startStateCommand := ch.sm.GetActiveState().GetStartCommand()
+
+	if message.Text == startStateCommand {
+		return nil
+	}
+
+	for _, handler := range ch.handlers {
+		if slices.Contains(handler.GetCommands(), startStateCommand) {
+			handler.InitHandler()
+			responses, _ := handler.Handle(startStateCommand, HandlerParams{message: message})
+			handler.DeinitHandler()
+			return responses
+		}
+	}
+
+	return nil
+}
+
 func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHandlerResponser, error) {
 	var res CommandHandlerResponse
 
 	receivedMessage := req.GetMessage()
+	command := receivedMessage.Text
 
-	if !slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), receivedMessage.Text) {
+	if !ch.checkCommandInState(command) {
 		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available "}
 	}
 
-	command := receivedMessage.Text
+	// Trying to handle in main handlers
 
-	switch command {
-	case "/level_one":
-		handleRes := LevelOneHandler(HandlerParams{message: receivedMessage})
-		showHandleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
-		lolRes := LevelFourStartHandler(HandlerParams{message: receivedMessage})
-		res.responses = append(res.responses, handleRes, showHandleRes, lolRes)
-	case "/level_two":
-		levelhandleRes := LevelTwoHandler(HandlerParams{message: receivedMessage})
-		showHandleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
-		res.responses = append(res.responses, levelhandleRes, showHandleRes)
-	case "/level_three":
-		levelhandleRes := LevelThreeHandler(HandlerParams{message: receivedMessage})
-		showHandleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
-		res.responses = append(res.responses, levelhandleRes, showHandleRes)
-	case "/level_four_start":
-		levelhandleRes := ModifyHandler(LevelFourStartHandler, HandlerParams{message: receivedMessage}, []int{StateBackable, RemovableByTrigger})
-		res.responses = append(res.responses, levelhandleRes)
-	case "/level_four_one":
-		levelhandleRes := ModifyHandler(LevelFourOneHandler, HandlerParams{message: receivedMessage}, []int{StateBackable, RemovableByTrigger})
-		res.responses = append(res.responses, levelhandleRes)
-	case "/level_four_two":
-		levelhandleRes := ModifyHandler(LevelFourTwoHandler, HandlerParams{message: receivedMessage}, []int{StateBackable, RemovableByTrigger})
-		res.responses = append(res.responses, levelhandleRes)
-	case "/level_four_three":
-		levelhandleRes := ModifyHandler(LevelFourThreeHandler, HandlerParams{message: receivedMessage}, []int{StateBackable, RemovableByTrigger})
-		res.responses = append(res.responses, levelhandleRes)
-	case "/level_four_four":
-		levelhandleRes := ModifyHandler(LevelFourFourHandler, HandlerParams{message: receivedMessage}, []int{RemovableByTrigger, RemoveTriggerer})
-		showHandleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
-		res.responses = append(res.responses, levelhandleRes, showHandleRes)
-	case "/big_messages":
-		levelhandleRes := BigMessagesHandler(HandlerParams{message: receivedMessage})
-		handleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
-		res.responses = append(res.responses, levelhandleRes, handleRes)
-	case "/show_commands":
-		handleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
-		res.responses = append(res.responses, handleRes)
-	case "/keyboard_start":
-		handleRes := ModifyHandler(KeyboardStartHandler, HandlerParams{message: receivedMessage}, []int{StateBackable, Keyboardable, RemovableByTrigger})
-		res.responses = append(res.responses, handleRes)
-	case "/keyboard_one":
-		handleRes := ModifyHandler(KeyboardOneHandler, HandlerParams{message: receivedMessage}, []int{CommandBackable, Keyboardable, RemovableByTrigger})
-		res.responses = append(res.responses, handleRes)
-	case "/keyboard_two":
-		handleRes := ModifyHandler(KeyboardTwoHandler, HandlerParams{message: receivedMessage}, []int{CommandBackable, Keyboardable, RemovableByTrigger})
-		res.responses = append(res.responses, handleRes)
-	case "/keyboard_three":
-		handleRes := ModifyHandler(KeyboardThreeHandler, HandlerParams{message: receivedMessage}, []int{StateBackable, RemoveTriggerer})
-		showHandleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
-		res.responses = append(res.responses, handleRes, showHandleRes)
-	case "/back_command":
-		handleRes, err := ch.handleBackCommandRequest(req)
-		if err != nil {
-			return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back command error: %w", err).Error()}
+	for _, handler := range ch.handlers {
+		if slices.Contains(handler.GetCommands(), command) || ch.activeHandler != nil {
+			if ch.activeHandler == nil {
+				ch.activeHandler = handler
+				ch.activeHandler.InitHandler()
+			}
+			responses, isFinished := ch.activeHandler.Handle(command, HandlerParams{message: receivedMessage})
+			if isFinished {
+				ch.activeHandler.DeinitHandler()
+				ch.activeHandler = nil
+			}
+			if req.ShouldUpdateQueue() {
+				ch.updateCommandsQueue(command)
+			}
+			res.responses = responses
+			break
 		}
-		return handleRes, nil
+	}
 
-	case "/back_state":
-		handleRes, err := ch.handleBackStateRequest(req)
+	// Trying to handle in additional handlers
 
-		if err != nil {
-			return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back state error: %w", err).Error()}
+	if len(res.responses) == 0 {
+		switch command {
+		case "/back_command":
+			handleRes, err := ch.handleBackCommandRequest(req)
+			if err != nil {
+				return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back command error: %w", err).Error()}
+			}
+			return handleRes, nil
+
+		case "/back_state":
+			handleRes, err := ch.handleBackStateRequest(req)
+
+			if err != nil {
+				return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back state error: %w", err).Error()}
+			}
+			return handleRes, nil
+		case "/create_error":
+			return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown"}
+		default:
+			return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown"}
 		}
-		return handleRes, nil
-	case "/create_error":
-		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown"}
-	default:
-		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown"}
 	}
 
 	if hasMultipleStatesInCommand(res) {
 		return CommandHandlerResponse{}, CommandHandlerError{message: "multiple states in commands are forbidden"}
 	}
 
-	for _, response := range res.responses {
+	// Trying to move to another state (if so, handle start command of new state)
 
+	for _, response := range res.responses {
 		if response.NextState() == "" {
 			continue
 		}
-
 		err := ch.sm.SetStateByName(response.NextState())
 		if err != nil {
-			return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("handle error: %w", err).Error()}
+			return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("handler error: %w", err).Error()}
+		}
+		stateResponses := ch.moveToAnotherState(receivedMessage)
+		if stateResponses != nil {
+			res.responses = append(res.responses, stateResponses...)
 		}
 		break
 	}
+
+	// Remove trigger marked messages if needed
 
 	for _, response := range res.responses {
 		if response.isRemoveTriggered {
@@ -269,15 +296,21 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 		}
 	}
 
-	if req.ShouldUpdateQueue() {
-		ch.updateCommandsQueue(command)
-	}
-
 	return res, nil
 }
 
-func NewCommandHandler(sm StateMachiner) *CommandHandler {
-	return &CommandHandler{
+func NewCommandHandler(sm StateMachiner, gs GlobalStater) *CommandHandler {
+	ch := &CommandHandler{
 		sm: sm,
+		gs: gs,
 	}
+
+	setInfoHandler := NewSetInfoHandler(gs)
+	keyboardHandler := NewKeyboardhandler(gs)
+	levelFourHandler := NewLevelFourHandler(gs)
+	startHandler := NewStartHandler(gs)
+
+	ch.handlers = append(ch.handlers, setInfoHandler, keyboardHandler, levelFourHandler, startHandler)
+
+	return ch
 }

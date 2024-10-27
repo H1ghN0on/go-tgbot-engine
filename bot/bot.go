@@ -107,10 +107,18 @@ func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isR
 
 	if isKeyboard && client.lastMessage.ID != 0 {
 		if message.Text != "" {
-			_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard))
-			if err != nil {
-				panic(err.Error())
+			if len(message.ButtonRows) == 0 {
+				_, err := client.api.Request(tgbotapi.NewEditMessageText(client.lastMessage.ChatID, client.lastMessage.ID, message.Text))
+				if err != nil {
+					panic(err.Error())
+				}
+			} else {
+				_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard))
+				if err != nil {
+					panic(err.Error())
+				}
 			}
+
 		} else {
 			_, err := client.api.Request(tgbotapi.NewEditMessageReplyMarkup(client.lastMessage.ChatID, client.lastMessage.ID, keyboard))
 			if err != nil {
