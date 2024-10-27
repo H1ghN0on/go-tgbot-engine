@@ -3,7 +3,6 @@ package statemachine
 import (
 	"slices"
 
-	"github.com/H1ghN0on/go-tgbot-engine/errors"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
 )
 
@@ -18,6 +17,14 @@ type State struct {
 	name              string
 	availableCommands []string
 	availableStates   []State
+}
+
+type StateMachineError struct {
+	message string
+}
+
+func (err StateMachineError) Error() string {
+	return err.message
 }
 
 func (state State) GetName() string {
@@ -63,35 +70,30 @@ func (sm *StateMachine) AddStates(states ...handlers.Stater) {
 }
 
 func (sm *StateMachine) SetStateByName(stateName string) error {
-	idx := slices.IndexFunc(sm.states, func(s State) bool {
-		return s.GetName() == stateName
-	})
-	if idx == -1 {
-		return errors.StateMachineError{Code: errors.WrongState, Message: "This state is not unavailable"}
+	err := sm.SetState(State{name: stateName})
+	if err != nil {
+		return StateMachineError{message: err.Error()}
 	}
-
-	if sm.activeState.GetName() == "" ||
-		sm.activeState.GetName() == stateName ||
-		slices.ContainsFunc(sm.activeState.availableStates, sm.CompareStates(sm.states[idx])) {
-		sm.activeState = sm.states[idx]
-		return nil
-	}
-
-	return errors.StateMachineError{Code: errors.WrongState, Message: "Can not move to this state"}
+	return nil
 }
 
 func (sm *StateMachine) SetState(state handlers.Stater) error {
-	if !slices.ContainsFunc(sm.states, sm.CompareStates(state.(State))) {
-		return errors.StateMachineError{Code: errors.WrongState, Message: "This state is not unavailable"}
+	if state.GetName() == "" {
+		return StateMachineError{message: "State has empty name"}
+	}
+
+	idx := slices.IndexFunc(sm.states, sm.CompareStates(state.(State)))
+	if idx == -1 {
+		return StateMachineError{message: "This state is not unavailable"}
 	}
 
 	if sm.activeState.GetName() == "" ||
 		sm.activeState.GetName() == state.GetName() ||
-		slices.ContainsFunc(sm.activeState.availableStates, sm.CompareStates(state.(State))) {
-		sm.activeState = state.(State)
+		slices.ContainsFunc(sm.activeState.availableStates, sm.CompareStates(sm.states[idx])) {
+		sm.activeState = sm.states[idx]
 		return nil
 	}
-	return errors.StateMachineError{Code: errors.WrongState, Message: "Can not move to this state"}
+	return StateMachineError{message: "Can not move to this state"}
 }
 
 func (sm *StateMachine) GetActiveState() handlers.Stater {

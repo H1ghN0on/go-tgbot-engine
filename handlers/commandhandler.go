@@ -1,11 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
-	errs "github.com/H1ghN0on/go-tgbot-engine/errors"
 )
 
 type Stater interface {
@@ -24,12 +24,20 @@ type StateMachiner interface {
 func hasMultipleStatesInCommand(res CommandHandlerResponse) bool {
 	statesSet := make(map[string]bool)
 	for _, v := range res.responses {
-		if v.ShouldSwitchState() != "" {
-			statesSet[v.ShouldSwitchState()] = true
+		if v.NextState() != "" {
+			statesSet[v.NextState()] = true
 		}
 	}
 
 	return len(statesSet) > 1
+}
+
+type CommandHandlerError struct {
+	message string
+}
+
+func (err CommandHandlerError) Error() string {
+	return err.message
 }
 
 type CommandHandlerResponse struct {
@@ -53,7 +61,7 @@ func (ch *CommandHandler) Handle(receivedMessage bottypes.Message) (bot.CommandH
 	var res CommandHandlerResponse
 
 	if !slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), receivedMessage.Text) {
-		return CommandHandlerResponse{}, errs.CommandHandlerError{Code: errs.UnknownCommand, Message: "This command is not available "}
+		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available "}
 	}
 
 	switch receivedMessage.Text {
@@ -107,23 +115,23 @@ func (ch *CommandHandler) Handle(receivedMessage bottypes.Message) (bot.CommandH
 		showHandleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, handleRes, showHandleRes)
 	case "/create_error":
-		return CommandHandlerResponse{}, errs.CommandHandlerError{Code: errs.UnknownCommand, Message: "This command is unknown "}
+		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown "}
 	default:
-		return CommandHandlerResponse{}, errs.CommandHandlerError{Code: errs.UnknownCommand, Message: "This command is unknown "}
+		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown "}
 	}
 
 	if hasMultipleStatesInCommand(res) {
-		return CommandHandlerResponse{}, errs.StateMachineError{Code: errs.MultipleStatesFromCommand, Message: "Multiple states are forbidden"}
+		return CommandHandlerResponse{}, CommandHandlerError{message: "multiple states in commands are forbidden"}
 	}
 
 	for _, response := range res.responses {
-		if response.ShouldSwitchState() == "" {
+		if response.NextState() == "" {
 			continue
 		}
 
-		err := ch.sm.SetStateByName(response.ShouldSwitchState())
+		err := ch.sm.SetStateByName(response.NextState())
 		if err != nil {
-			return CommandHandlerResponse{}, errs.StateMachineError{Code: errs.WrongState, Message: err.Error()}
+			return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("handle error: %w", err).Error()}
 		}
 		break
 	}
