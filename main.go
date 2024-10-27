@@ -37,17 +37,20 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		"/level_four_two",
 		"/level_four_three",
 		"/level_four_four",
-		"/state_back",
+		"/back_state",
 	)
 
 	keyboardState := statemachine.NewState(
 		"keyboard-state",
 
-		"/keyboard_one",
+		"/keyboard_start",
 
+		"/keyboard_start",
 		"/keyboard_one",
 		"/keyboard_two",
 		"/keyboard_three",
+		"/back_state",
+		"/back_command",
 	)
 
 	startState.SetAvailableStates(*levelFourState, *keyboardState)

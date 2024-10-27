@@ -115,7 +115,13 @@ func KeyboardStartHandler(params HandlerParams) HandlerResponse {
 		},
 	}
 
-	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
+	buttonRow3 := bottypes.ButtonRows{
+		Buttons: []bottypes.Button{
+			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
+		},
+	}
+
+	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3)
 	res.messages = append(res.messages, retMessage)
 
 	return HandlerResponse{messages: res.messages, nextState: "keyboard-state", isKeyboard: true}
@@ -141,7 +147,13 @@ func KeyboardOneHandler(params HandlerParams) HandlerResponse {
 		},
 	}
 
-	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
+	buttonRow3 := bottypes.ButtonRows{
+		Buttons: []bottypes.Button{
+			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_command"}},
+		},
+	}
+
+	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3)
 	res.messages = append(res.messages, retMessage)
 
 	return HandlerResponse{messages: res.messages, isKeyboard: true}
@@ -167,7 +179,13 @@ func KeyboardTwoHandler(params HandlerParams) HandlerResponse {
 		},
 	}
 
-	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
+	buttonRow3 := bottypes.ButtonRows{
+		Buttons: []bottypes.Button{
+			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_command"}},
+		},
+	}
+
+	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3)
 	res.messages = append(res.messages, retMessage)
 
 	return HandlerResponse{messages: res.messages, isKeyboard: true}
@@ -197,7 +215,7 @@ func LevelFourStartHandler(params HandlerParams) HandlerResponse {
 
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/state_back"}},
+			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
 		},
 	})
 
@@ -220,7 +238,7 @@ func LevelFourOneHandler(params HandlerParams) HandlerResponse {
 
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/state_back"}},
+			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
 		},
 	})
 
@@ -243,7 +261,7 @@ func LevelFourTwoHandler(params HandlerParams) HandlerResponse {
 
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/state_back"}},
+			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
 		},
 	})
 
@@ -266,7 +284,7 @@ func LevelFourThreeHandler(params HandlerParams) HandlerResponse {
 
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/state_back"}},
+			{ChatID: chatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
 		},
 	})
 
@@ -293,20 +311,4 @@ func BigMessagesHandler(params HandlerParams) HandlerResponse {
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "Давно выяснено, что при оценке дизайна и композиции читаемый текст мешает сосредоточиться. Lorem Ipsum используют потому, что тот обеспечивает более или менее стандартное заполнение шаблона, а также реальное распределение букв и пробелов в абзацах, которое не получается при простой дубликации 'Здесь ваш текст.. Здесь ваш текст.. Здесь ваш текст..' Многие программы электронной вёрстки и редакторы HTML используют Lorem Ipsum в качестве текста по умолчанию, так что поиск по ключевым словам 'lorem ipsum' сразу показывает, как много веб-страниц всё ещё дожидаются своего настоящего рождения. За прошедшие годы текст Lorem Ipsum получил много версий. Некоторые версии появились по ошибке, некоторые - намеренно (например, юмористические варианты)."})
 
 	return HandlerResponse{messages: res.messages, nextState: "start-state"}
-}
-
-func BackHandler(params HandlerParams) HandlerResponse {
-	var res HandlerResponse
-
-	chatID := params.message.ChatID
-	response := bottypes.Message{ChatID: chatID, Text: "THREE!"}
-	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
-		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "FOUR", Command: bottypes.Command{Text: "/level_four_four"}},
-		},
-	})
-
-	res.messages = append(res.messages, response)
-
-	return HandlerResponse{messages: res.messages}
 }

@@ -94,9 +94,11 @@ func (sm *StateMachine) SetState(state handlers.Stater) error {
 		return StateMachineError{message: "This state is not unavailable"}
 	}
 
-	if sm.activeState.GetName() == "" ||
-		sm.activeState.GetName() == state.GetName() ||
-		slices.ContainsFunc(sm.activeState.availableStates, sm.CompareStates(sm.states[idx])) {
+	if sm.activeState.GetName() == state.GetName() {
+		return nil
+	}
+
+	if sm.activeState.GetName() == "" || slices.ContainsFunc(sm.activeState.availableStates, sm.CompareStates(sm.states[idx])) {
 		sm.previousState = sm.activeState
 		sm.activeState = sm.states[idx]
 		return nil
@@ -104,10 +106,10 @@ func (sm *StateMachine) SetState(state handlers.Stater) error {
 	return StateMachineError{message: "Can not move to this state"}
 }
 
-func (sm *StateMachine) GetActiveState() handlers.Stater {
-	return sm.activeState
-}
-
 func (sm *StateMachine) GetPreviousState() handlers.Stater {
 	return sm.previousState
+}
+
+func (sm *StateMachine) GetActiveState() handlers.Stater {
+	return sm.activeState
 }

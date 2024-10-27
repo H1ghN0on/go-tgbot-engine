@@ -28,12 +28,18 @@ type HandlerResponser interface {
 	IsKeyboard() bool
 }
 
+type CommandHandlerRequester interface {
+	GetMessage() bottypes.Message
+	ShouldUpdateQueue() bool
+}
+
 type CommandHandlerResponser interface {
 	GetResponses() []HandlerResponser
 }
 
 type CommandHandler interface {
-	Handle(bottypes.Message) (CommandHandlerResponser, error)
+	NewCommandHandlerRequest(msg bottypes.Message, shouldUpdateQueue bool) CommandHandlerRequester
+	Handle(req CommandHandlerRequester) (CommandHandlerResponser, error)
 }
 
 func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.Message, int64, error) {
@@ -148,7 +154,8 @@ func (client *Client) ListenMessages() {
 			continue
 		}
 
-		handlerResult, err := client.cmdhandler.Handle(receivedMessage)
+		req := client.cmdhandler.NewCommandHandlerRequest(receivedMessage, true)
+		handlerResult, err := client.cmdhandler.Handle(req)
 		if err != nil {
 			client.sendErrorMessage(chatID, fmt.Errorf("handle command error: %w", err))
 			continue
