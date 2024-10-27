@@ -22,7 +22,20 @@ type Logger struct {
 }
 
 // Creating a new main logger with subcategories
-func NewLogger(level LogLevel) *Logger {
+func NewLogger(levelInt int) *Logger {
+	var level LogLevel
+
+	switch levelInt {
+	case 0:
+		level = Info
+	case 1:
+		level = Warning
+	case 2:
+		level = Critical
+	default:
+		level = Info
+	}
+
 	rootLogger := &Logger{
 		level:    level,
 		category: "Root",
@@ -63,6 +76,9 @@ func (l *Logger) logMessage(level LogLevel, message string) {
 	case Critical:
 		levelStr = "[CRITICAL]"
 		color = "\033[31m" // Red color
+	default:
+		levelStr = "[INFO]"
+		color = "\033[34m" // Blue color
 	}
 
 	resetColor := "\033[0m"

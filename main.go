@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
@@ -68,21 +69,19 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 
 func main() {
 
-	// tgBotKey, exists := os.LookupEnv("TELEGRAM_BOT_API")
-	// if !exists {
-	// 	panic(".env does not contain TELEGRAM_BOT_API")
-	// }
-	mainLogger := logger.NewLogger(logger.Critical)
+	if err := godotenv.Load(); err != nil {
+		panic("No .env file found")
+	}
+
+	loggerStatus, _ := os.LookupEnv("LOGGER_LEVEL")
+	levelInt, _ := strconv.Atoi(loggerStatus)
+	mainLogger := logger.NewLogger(levelInt)
 
 	mainLogger.Info("This is an info message")
 	mainLogger.Warning("This is a warning message")
 
 	mainLogger.StateMachine.Warning("StateMachine warning")
 	mainLogger.CommandHandler.Critical("CommandHandler error")
-
-	if err := godotenv.Load(); err != nil {
-		panic("No .env file found")
-	}
 
 	tgBotKey, exists := os.LookupEnv("TELEGRAM_BOT_API")
 	if !exists {
