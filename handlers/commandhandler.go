@@ -56,7 +56,8 @@ func (req CommandHandlerRequest) ShouldUpdateQueue() bool {
 }
 
 type CommandHandlerResponse struct {
-	responses []HandlerResponse
+	responses     []HandlerResponse
+	triggerRemove bool
 }
 
 func (chr CommandHandlerResponse) GetResponses() []bot.HandlerResponser {
@@ -66,6 +67,10 @@ func (chr CommandHandlerResponse) GetResponses() []bot.HandlerResponser {
 		convertedResponses = append(convertedResponses, response)
 	}
 	return convertedResponses
+}
+
+func (chr CommandHandlerResponse) TriggerRemove() bool {
+	return chr.triggerRemove
 }
 
 type CommandHandler struct {
@@ -83,7 +88,7 @@ func (ch *CommandHandler) updateCommandsQueue(command string) {
 		ch.commandsQueue = append(ch.commandsQueue, command)
 	}
 
-	if len(ch.commandsQueue) > 10 {
+	if len(ch.commandsQueue) > 20 {
 		ch.commandsQueue = ch.commandsQueue[1:len(ch.commandsQueue)]
 	}
 }
@@ -97,6 +102,8 @@ func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.Message, shouldU
 
 func (ch *CommandHandler) handleBackStateRequest(req bot.CommandHandlerRequester) (bot.CommandHandlerResponser, error) {
 
+	var res CommandHandlerResponse
+
 	previousState := ch.sm.GetPreviousState()
 	if previousState.GetName() == "" {
 		return CommandHandlerResponse{}, CommandHandlerError{message: "can not return to previous state"}
@@ -104,7 +111,8 @@ func (ch *CommandHandler) handleBackStateRequest(req bot.CommandHandlerRequester
 	ch.sm.SetState(previousState)
 	receivedMessageBack := req.GetMessage()
 	receivedMessageBack.Text = previousState.GetStartCommand()
-	res, err := ch.Handle(CommandHandlerRequest{
+
+	handleRes, err := ch.Handle(CommandHandlerRequest{
 		receivedMessage:   receivedMessageBack,
 		shouldUpdateQueue: false,
 	})
@@ -117,10 +125,15 @@ func (ch *CommandHandler) handleBackStateRequest(req bot.CommandHandlerRequester
 		ch.updateCommandsQueue(req.GetMessage().Text)
 	}
 
+	res = handleRes.(CommandHandlerResponse)
+	res.triggerRemove = true
+
 	return res, nil
 }
 
 func (ch *CommandHandler) handleBackCommandRequest(req bot.CommandHandlerRequester) (bot.CommandHandlerResponser, error) {
+
+	var res CommandHandlerResponse
 
 	if len(ch.commandsQueue) < 2 {
 		return CommandHandlerResponse{}, CommandHandlerError{message: "can not return to previous command"}
@@ -133,10 +146,11 @@ func (ch *CommandHandler) handleBackCommandRequest(req bot.CommandHandlerRequest
 	receivedMessageBack := req.GetMessage()
 	receivedMessageBack.Text = lastCommand
 
-	res, err := ch.Handle(CommandHandlerRequest{
+	handleRes, err := ch.Handle(CommandHandlerRequest{
 		receivedMessage:   receivedMessageBack,
 		shouldUpdateQueue: false,
 	})
+
 	if err != nil {
 		return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back command error: %w", err).Error()}
 	}
@@ -144,6 +158,8 @@ func (ch *CommandHandler) handleBackCommandRequest(req bot.CommandHandlerRequest
 	if req.ShouldUpdateQueue() {
 		ch.updateCommandsQueue(req.GetMessage().Text)
 	}
+
+	res = handleRes.(CommandHandlerResponse)
 
 	return res, nil
 }
@@ -174,19 +190,19 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 		showHandleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, levelhandleRes, showHandleRes)
 	case "/level_four_start":
-		levelhandleRes := MakeStateBackable(LevelFourStartHandler, HandlerParams{message: receivedMessage})
+		levelhandleRes := ModifyHandler(LevelFourStartHandler, HandlerParams{message: receivedMessage}, []int{StateBackable, RemovableByTrigger})
 		res.responses = append(res.responses, levelhandleRes)
 	case "/level_four_one":
-		levelhandleRes := MakeStateBackable(LevelFourOneHandler, HandlerParams{message: receivedMessage})
+		levelhandleRes := ModifyHandler(LevelFourOneHandler, HandlerParams{message: receivedMessage}, []int{StateBackable, RemovableByTrigger})
 		res.responses = append(res.responses, levelhandleRes)
 	case "/level_four_two":
-		levelhandleRes := MakeStateBackable(LevelFourTwoHandler, HandlerParams{message: receivedMessage})
+		levelhandleRes := ModifyHandler(LevelFourTwoHandler, HandlerParams{message: receivedMessage}, []int{StateBackable, RemovableByTrigger})
 		res.responses = append(res.responses, levelhandleRes)
 	case "/level_four_three":
-		levelhandleRes := MakeStateBackable(LevelFourThreeHandler, HandlerParams{message: receivedMessage})
+		levelhandleRes := ModifyHandler(LevelFourThreeHandler, HandlerParams{message: receivedMessage}, []int{StateBackable, RemovableByTrigger})
 		res.responses = append(res.responses, levelhandleRes)
 	case "/level_four_four":
-		levelhandleRes := LevelFourFourHandler(HandlerParams{message: receivedMessage})
+		levelhandleRes := ModifyHandler(LevelFourFourHandler, HandlerParams{message: receivedMessage}, []int{RemovableByTrigger, RemoveTriggerer})
 		showHandleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, levelhandleRes, showHandleRes)
 	case "/big_messages":
@@ -197,27 +213,28 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 		handleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, handleRes)
 	case "/keyboard_start":
-		handleRes := MakeStateBackable(KeyboardStartHandler, HandlerParams{message: receivedMessage})
+		handleRes := ModifyHandler(KeyboardStartHandler, HandlerParams{message: receivedMessage}, []int{StateBackable, Keyboardable, RemovableByTrigger})
 		res.responses = append(res.responses, handleRes)
 	case "/keyboard_one":
-		handleRes := MakeCommandBackable(KeyboardOneHandler, HandlerParams{message: receivedMessage})
+		handleRes := ModifyHandler(KeyboardOneHandler, HandlerParams{message: receivedMessage}, []int{CommandBackable, Keyboardable, RemovableByTrigger})
 		res.responses = append(res.responses, handleRes)
 	case "/keyboard_two":
-		handleRes := MakeCommandBackable(KeyboardTwoHandler, HandlerParams{message: receivedMessage})
+		handleRes := ModifyHandler(KeyboardTwoHandler, HandlerParams{message: receivedMessage}, []int{CommandBackable, Keyboardable, RemovableByTrigger})
 		res.responses = append(res.responses, handleRes)
 	case "/keyboard_three":
-		handleRes := KeyboardThreeHandler(HandlerParams{message: receivedMessage})
+		handleRes := ModifyHandler(KeyboardThreeHandler, HandlerParams{message: receivedMessage}, []int{StateBackable, RemoveTriggerer})
 		showHandleRes := ShowCommandsHandler(HandlerParams{message: receivedMessage})
 		res.responses = append(res.responses, handleRes, showHandleRes)
 	case "/back_command":
 		handleRes, err := ch.handleBackCommandRequest(req)
 		if err != nil {
-			return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back state error: %w", err).Error()}
+			return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back command error: %w", err).Error()}
 		}
 		return handleRes, nil
 
 	case "/back_state":
 		handleRes, err := ch.handleBackStateRequest(req)
+
 		if err != nil {
 			return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back state error: %w", err).Error()}
 		}
@@ -233,6 +250,7 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 	}
 
 	for _, response := range res.responses {
+
 		if response.NextState() == "" {
 			continue
 		}
@@ -242,6 +260,13 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 			return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("handle error: %w", err).Error()}
 		}
 		break
+	}
+
+	for _, response := range res.responses {
+		if response.isRemoveTriggered {
+			res.triggerRemove = true
+			break
+		}
 	}
 
 	if req.ShouldUpdateQueue() {
