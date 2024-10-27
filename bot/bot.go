@@ -87,6 +87,34 @@ func (client Client) compareMessages(a bottypes.Message) func(bottypes.Message) 
 	}
 }
 
+func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.InlineKeyboardMarkup) error {
+	if message.Text != "" && len(message.ButtonRows) == 0 {
+		_, err := client.api.Request(tgbotapi.NewEditMessageText(client.lastMessage.ChatID, client.lastMessage.ID, message.Text))
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if message.Text != "" && len(message.ButtonRows) != 0 {
+		_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard))
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if message.Text == "" && len(message.ButtonRows) != 0 {
+		_, err := client.api.Request(tgbotapi.NewEditMessageReplyMarkup(client.lastMessage.ChatID, client.lastMessage.ID, keyboard))
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	return fmt.Errorf("keyboard setup error")
+}
+
 func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isRemovableByTrigger bool) error {
 
 	var keyboard tgbotapi.InlineKeyboardMarkup
@@ -106,24 +134,9 @@ func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isR
 	}
 
 	if isKeyboard && client.lastMessage.ID != 0 {
-		if message.Text != "" {
-			if len(message.ButtonRows) == 0 {
-				_, err := client.api.Request(tgbotapi.NewEditMessageText(client.lastMessage.ChatID, client.lastMessage.ID, message.Text))
-				if err != nil {
-					panic(err.Error())
-				}
-			} else {
-				_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard))
-				if err != nil {
-					panic(err.Error())
-				}
-			}
-
-		} else {
-			_, err := client.api.Request(tgbotapi.NewEditMessageReplyMarkup(client.lastMessage.ChatID, client.lastMessage.ID, keyboard))
-			if err != nil {
-				panic(err.Error())
-			}
+		err := client.SetupKeyboard(message, keyboard)
+		if err != nil {
+			return BotError{message: "Send message error: " + err.Error()}
 		}
 
 		if isRemovableByTrigger && !slices.ContainsFunc(client.messagesToRemove, client.compareMessages(client.lastMessage)) {

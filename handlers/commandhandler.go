@@ -186,8 +186,8 @@ func (ch *CommandHandler) handleBackCommandRequest(req bot.CommandHandlerRequest
 }
 
 func (ch *CommandHandler) checkCommandInState(command string) bool {
-	return !slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), command) &&
-		!(slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), "*") && !strings.HasPrefix(command, "/"))
+	return slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), command) ||
+		(slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), "*") && !strings.HasPrefix(command, "/"))
 }
 
 func (ch *CommandHandler) moveToAnotherState(message bottypes.Message) []HandlerResponse {
