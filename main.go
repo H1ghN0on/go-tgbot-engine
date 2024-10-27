@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 	"strconv"
 
@@ -73,8 +74,16 @@ func main() {
 		panic("No .env file found")
 	}
 
-	loggerStatus, _ := os.LookupEnv("LOGGER_LEVEL")
-	levelInt, _ := strconv.Atoi(loggerStatus)
+	loggerStatus, exists := os.LookupEnv("LOGGER_LEVEL")
+	if !exists {
+		log.Println(".env does not contain LOGGER_LEVEL")
+	}
+	levelInt, err := strconv.Atoi(loggerStatus)
+	if err != nil {
+		log.Println("Error:", err, "\nChoosed default LogLevel `INFO`")
+		levelInt = 0
+	}
+
 	mainLogger := logger.NewLogger(levelInt)
 
 	mainLogger.Info("This is an info message")
@@ -89,9 +98,7 @@ func main() {
 	}
 	botAPI, err := tgbotapi.NewBotAPI(tgBotKey)
 	if err != nil {
-		// panic(err.Error())
-		mainLogger.Warning(err.Error())
-
+		panic(err.Error())
 	}
 
 	var sm statemachine.StateMachine

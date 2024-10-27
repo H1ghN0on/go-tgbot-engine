@@ -7,7 +7,6 @@ import (
 
 type LogLevel int
 
-// Logging levels
 const (
 	Info LogLevel = iota
 	Warning
@@ -21,7 +20,6 @@ type Logger struct {
 	CommandHandler *Logger
 }
 
-// Creating a new main logger with subcategories
 func NewLogger(levelInt int) *Logger {
 	var level LogLevel
 
@@ -41,7 +39,6 @@ func NewLogger(levelInt int) *Logger {
 		category: "Root",
 	}
 
-	// init subcategories
 	rootLogger.StateMachine = &Logger{
 		level:    level,
 		category: "StateMachine",
@@ -54,17 +51,14 @@ func NewLogger(levelInt int) *Logger {
 	return rootLogger
 }
 
-// basic method for displaying log messages
 func (l *Logger) logMessage(level LogLevel, message string) {
 	if level < l.level {
-		// Skip the message if its level is lower than the current logger level
 		return
 	}
 
 	// log time
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
 
-	// Prefix logging level
 	var levelStr, color string
 	switch level {
 	case Info:
@@ -77,13 +71,13 @@ func (l *Logger) logMessage(level LogLevel, message string) {
 		levelStr = "[CRITICAL]"
 		color = "\033[31m" // Red color
 	default:
+		fmt.Println("Invalid value for LogLevel. Choosed default LogLevel `INFO`")
 		levelStr = "[INFO]"
 		color = "\033[34m" // Blue color
 	}
 
-	resetColor := "\033[0m"
+	resetColor := "\033[0m" // Reset color
 
-	// Forming and display a message
 	logLine := fmt.Sprintf("%s %s%s [%s] %s%s", timestamp, color, levelStr, l.category, message, resetColor)
 	fmt.Println(logLine)
 
