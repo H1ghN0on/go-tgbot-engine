@@ -18,7 +18,10 @@ type Logger struct {
 	category       string
 	StateMachine   *Logger
 	CommandHandler *Logger
+	Bot            *Logger
 }
+
+var GlobalLogger = &Logger{}
 
 func NewLogger(levelInt int) *Logger {
 	var level LogLevel
@@ -47,6 +50,10 @@ func NewLogger(levelInt int) *Logger {
 	rootLogger.CommandHandler = &Logger{
 		level:    level,
 		category: "CommandHandler",
+	}
+    rootLogger.Bot = &Logger{
+		level:    level,
+		category: "Bot",
 	}
 
 	return rootLogger

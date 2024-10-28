@@ -86,11 +86,13 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 	}
 }
 
-func main() {
-
+func init() {
 	if err := godotenv.Load(); err != nil {
 		panic("No .env file found")
 	}
+}
+
+func main() {
 
 	loggerStatus, exists := os.LookupEnv("LOGGER_LEVEL")
 	if !exists {
@@ -101,9 +103,8 @@ func main() {
 		log.Println("strconv.Atoi error:", err)
 		levelInt = 0
 	}
-
-	mainLogger := logger.NewLogger(levelInt)
-	mainLogger.Info("This is an info message")
+	logger.GlobalLogger = logger.NewLogger(levelInt)
+	logger.GlobalLogger.Info("This is an info message")
 
 	tgBotKey, exists := os.LookupEnv("TELEGRAM_BOT_API")
 	if !exists {

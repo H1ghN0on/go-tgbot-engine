@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
+	"github.com/H1ghN0on/go-tgbot-engine/logger"
 )
 
 type Command string
@@ -79,6 +80,7 @@ func (sm *StateMachine) AddStates(states ...handlers.Stater) {
 func (sm *StateMachine) SetStateByName(stateName string) error {
 	err := sm.SetState(State{name: stateName})
 	if err != nil {
+		logger.GlobalLogger.StateMachine.Critical(err.Error())
 		return StateMachineError{message: err.Error()}
 	}
 	return nil
@@ -86,11 +88,13 @@ func (sm *StateMachine) SetStateByName(stateName string) error {
 
 func (sm *StateMachine) SetState(state handlers.Stater) error {
 	if state.GetName() == "" {
+		logger.GlobalLogger.StateMachine.Critical("State has empty name")
 		return StateMachineError{message: "State has empty name"}
 	}
 
 	idx := slices.IndexFunc(sm.states, sm.CompareStates(state.(State)))
 	if idx == -1 {
+		logger.GlobalLogger.StateMachine.Critical("This state is not unavailable")
 		return StateMachineError{message: "This state is not unavailable"}
 	}
 
@@ -103,6 +107,7 @@ func (sm *StateMachine) SetState(state handlers.Stater) error {
 		sm.activeState = sm.states[idx]
 		return nil
 	}
+	logger.GlobalLogger.StateMachine.Critical("Can not move to this state")
 	return StateMachineError{message: "Can not move to this state"}
 }
 

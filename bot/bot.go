@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	"github.com/H1ghN0on/go-tgbot-engine/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -66,6 +67,7 @@ func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.Message, in
 
 		callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 		if _, err := client.api.Request(callback); err != nil {
+			logger.GlobalLogger.Bot.Critical("callback request failed")
 			return bottypes.Message{}, chatID, BotError{message: "callback request failed"}
 		}
 
@@ -75,6 +77,7 @@ func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.Message, in
 			Text:   update.CallbackQuery.Data}
 
 	} else {
+		logger.GlobalLogger.Bot.Critical("unknown message received")
 		return bottypes.Message{}, 0, BotError{message: "unknown message received"}
 	}
 
@@ -91,6 +94,7 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 	if message.Text != "" && len(message.ButtonRows) == 0 {
 		_, err := client.api.Request(tgbotapi.NewEditMessageText(client.lastMessage.ChatID, client.lastMessage.ID, message.Text))
 		if err != nil {
+			logger.GlobalLogger.Bot.Critical(err.Error())
 			return err
 		}
 		return nil
@@ -99,6 +103,7 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 	if message.Text != "" && len(message.ButtonRows) != 0 {
 		_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard))
 		if err != nil {
+			logger.GlobalLogger.Bot.Critical(err.Error())
 			return err
 		}
 		return nil
@@ -107,11 +112,12 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 	if message.Text == "" && len(message.ButtonRows) != 0 {
 		_, err := client.api.Request(tgbotapi.NewEditMessageReplyMarkup(client.lastMessage.ChatID, client.lastMessage.ID, keyboard))
 		if err != nil {
+			logger.GlobalLogger.Bot.Critical(err.Error())
 			return err
 		}
 		return nil
 	}
-
+	logger.GlobalLogger.Bot.Critical("keyboard setup error")
 	return fmt.Errorf("keyboard setup error")
 }
 
@@ -136,6 +142,8 @@ func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isR
 	if isKeyboard && client.lastMessage.ID != 0 {
 		err := client.SetupKeyboard(message, keyboard)
 		if err != nil {
+			formattedMessage := fmt.Sprintf("Send message error:  %v", err.Error())
+			logger.GlobalLogger.Bot.Critical(formattedMessage)
 			return BotError{message: "Send message error: " + err.Error()}
 		}
 
@@ -148,6 +156,8 @@ func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isR
 
 	sent, err := client.api.Send(msg)
 	if err != nil {
+		formattedMessage := fmt.Sprintf("Send message error:  %v", err.Error())
+		logger.GlobalLogger.Bot.Critical(formattedMessage)
 		return BotError{message: "Send message error: " + err.Error()}
 	}
 
@@ -166,6 +176,7 @@ func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isR
 
 func (client *Client) sendErrorMessage(chatID int64, err error) {
 	if chatID == 0 {
+		logger.GlobalLogger.Bot.Critical("unknown chat ID")
 		panic("unknown chat ID")
 	}
 
@@ -175,7 +186,7 @@ func (client *Client) sendErrorMessage(chatID int64, err error) {
 
 	sendErr := client.SendMessage(responseMessage, false, false)
 	if sendErr != nil {
-		panic(sendErr)
+		logger.GlobalLogger.Bot.Critical(sendErr.Error())
 	}
 }
 
@@ -204,6 +215,8 @@ func (client *Client) removeMessagesByTrigger() error {
 		}
 		_, err := client.api.Request(msgToDelete)
 		if err != nil {
+			formattedMessage := fmt.Sprintf("remove error:  %v", err.Error())
+			logger.GlobalLogger.Bot.Critical(formattedMessage)
 			return fmt.Errorf("remove error: %w", err)
 		}
 	}
@@ -222,6 +235,8 @@ func (client *Client) ListenMessages() {
 
 		receivedMessage, chatID, err := client.parseMessage(update)
 		if err != nil {
+			formattedMessage := fmt.Sprintf("parse error:  %v", err.Error())
+			logger.GlobalLogger.Bot.Critical(formattedMessage)
 			client.sendErrorMessage(chatID, fmt.Errorf("parse error: %w", err))
 			continue
 		}
@@ -229,6 +244,8 @@ func (client *Client) ListenMessages() {
 		req := client.cmdhandler.NewCommandHandlerRequest(receivedMessage, true)
 		handlerResult, err := client.cmdhandler.Handle(req)
 		if err != nil {
+			formattedMessage := fmt.Sprintf("handle command error:  %v", err.Error())
+			logger.GlobalLogger.Bot.Critical(formattedMessage)
 			client.sendErrorMessage(chatID, fmt.Errorf("handle command error: %w", err))
 			continue
 		}
@@ -237,7 +254,7 @@ func (client *Client) ListenMessages() {
 			for _, v := range response.GetMessages() {
 				err := client.SendMessage(v, response.IsKeyboard(), response.IsRemovableByTrigger())
 				if err != nil {
-					panic(err)
+					logger.GlobalLogger.Bot.Critical(err.Error())
 				}
 			}
 		}
@@ -245,7 +262,7 @@ func (client *Client) ListenMessages() {
 		if handlerResult.TriggerRemove() {
 			err := client.removeMessagesByTrigger()
 			if err != nil {
-				panic(err)
+				logger.GlobalLogger.Bot.Critical(err.Error())
 			}
 		}
 	}
