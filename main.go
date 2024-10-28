@@ -1,10 +1,13 @@
 package main
 
 import (
+	"log"
 	"os"
+	"strconv"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
+	"github.com/H1ghN0on/go-tgbot-engine/logger"
 	"github.com/H1ghN0on/go-tgbot-engine/statemachine"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -70,6 +73,19 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		panic("No .env file found")
 	}
+
+	loggerStatus, exists := os.LookupEnv("LOGGER_LEVEL")
+	if !exists {
+		log.Println(".env does not contain LOGGER_LEVEL")
+	}
+	levelInt, err := strconv.Atoi(loggerStatus)
+	if err != nil {
+		log.Println("strconv.Atoi error:", err)
+		levelInt = 0
+	}
+
+	mainLogger := logger.NewLogger(levelInt)
+	mainLogger.Info("This is an info message")
 
 	tgBotKey, exists := os.LookupEnv("TELEGRAM_BOT_API")
 	if !exists {
