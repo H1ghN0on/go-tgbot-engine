@@ -39,6 +39,7 @@ type CommandHandlerRequester interface {
 type CommandHandlerResponser interface {
 	GetResponses() []HandlerResponser
 	TriggerRemove() bool
+	IsNothing() bool
 }
 
 type CommandHandler interface {
@@ -74,6 +75,9 @@ func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.Message, in
 			ChatID: chatID,
 			Text:   update.CallbackQuery.Data}
 
+	} else if update.EditedMessage != nil {
+		chatID = update.EditedMessage.Chat.ID
+		return bottypes.Message{}, chatID, BotError{message: "editing is forbidden"}
 	} else {
 		return bottypes.Message{}, 0, BotError{message: "unknown message received"}
 	}
@@ -88,34 +92,41 @@ func (client Client) compareMessages(a bottypes.Message) func(bottypes.Message) 
 }
 
 func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.InlineKeyboardMarkup) error {
-	if message.Text != "" && len(message.ButtonRows) == 0 {
-		_, err := client.api.Request(tgbotapi.NewEditMessageText(client.lastMessage.ChatID, client.lastMessage.ID, message.Text))
-		if err != nil {
-			return err
-		}
-		return nil
-	}
+	hasText := message.Text != ""
+	hasButtons := len(message.ButtonRows) != 0
 
-	if message.Text != "" && len(message.ButtonRows) != 0 {
-		_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard))
-		if err != nil {
-			return err
+	if hasText {
+		if hasButtons {
+			_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard))
+			if err != nil {
+				return err
+			}
+			return nil
+		} else {
+			_, err := client.api.Request(tgbotapi.NewEditMessageText(client.lastMessage.ChatID, client.lastMessage.ID, message.Text))
+			if err != nil {
+				return err
+			}
+			return nil
 		}
-		return nil
-	}
-
-	if message.Text == "" && len(message.ButtonRows) != 0 {
-		_, err := client.api.Request(tgbotapi.NewEditMessageReplyMarkup(client.lastMessage.ChatID, client.lastMessage.ID, keyboard))
-		if err != nil {
-			return err
+	} else {
+		if hasButtons {
+			_, err := client.api.Request(tgbotapi.NewEditMessageReplyMarkup(client.lastMessage.ChatID, client.lastMessage.ID, keyboard))
+			if err != nil {
+				return err
+			}
+			return nil
 		}
-		return nil
 	}
 
 	return fmt.Errorf("keyboard setup error")
 }
 
 func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isRemovableByTrigger bool) error {
+
+	if message.ChatID == 0 {
+		return nil
+	}
 
 	var keyboard tgbotapi.InlineKeyboardMarkup
 
@@ -127,8 +138,12 @@ func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isR
 			for _, button := range buttonRow.Buttons {
 				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, button.Command.Text))
 			}
+			for _, button := range buttonRow.CheckboxButtons {
+				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, button.Command.Text))
+			}
 			buttonRows = append(buttonRows, buttons)
 		}
+
 		keyboard = tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
 		msg.ReplyMarkup = keyboard
 	}
@@ -230,6 +245,10 @@ func (client *Client) ListenMessages() {
 		handlerResult, err := client.cmdhandler.Handle(req)
 		if err != nil {
 			client.sendErrorMessage(chatID, fmt.Errorf("handle command error: %w", err))
+			continue
+		}
+
+		if handlerResult.IsNothing() {
 			continue
 		}
 

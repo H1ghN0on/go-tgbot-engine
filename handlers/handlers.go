@@ -12,6 +12,9 @@ const (
 	RemovableByTrigger
 	Keyboardable
 	RemoveTriggerer
+	CheckboxableOne
+	CheckboxableTwo
+	Nothingness
 )
 
 type Handler struct {
@@ -47,6 +50,7 @@ type HandlerResponse struct {
 	isKeyboard           bool
 	isRemovableByTrigger bool
 	isRemoveTriggered    bool
+	isNothing            bool
 }
 
 func (hr HandlerResponse) GetMessages() []bottypes.Message {
@@ -73,6 +77,12 @@ func NewHandler(gs GlobalStater) *Handler {
 
 func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResponse, modifiers []int) func(HandlerParams) HandlerResponse {
 	return func(params HandlerParams) HandlerResponse {
+		if slices.Contains(modifiers, Nothingness) {
+			return HandlerResponse{
+				isNothing: true,
+			}
+		}
+
 		response := handlerFoo(params)
 		for idx, message := range response.messages {
 
@@ -91,6 +101,39 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResp
 					},
 				})
 			}
+
+			if slices.Contains(modifiers, CheckboxableOne) {
+				checkboxEmoji := "✅"
+				emptyEmoji := "⬜"
+
+				for rowIdx := range response.messages[idx].ButtonRows {
+					for checkboxIdx, checkboxButton := range response.messages[idx].ButtonRows[rowIdx].CheckboxButtons {
+						if checkboxButton.Active {
+							response.messages[idx].ButtonRows[rowIdx].CheckboxButtons[checkboxIdx].Text = checkboxEmoji + " " + checkboxButton.Text
+						} else {
+							response.messages[idx].ButtonRows[rowIdx].CheckboxButtons[checkboxIdx].Text = emptyEmoji + " " + checkboxButton.Text
+						}
+					}
+				}
+
+			}
+
+			if slices.Contains(modifiers, CheckboxableTwo) {
+				checkboxEmoji := "✅"
+				emptyEmoji := "⬜"
+				for rowIdx := range response.messages[idx].ButtonRows {
+					for checkboxIdx, checkboxButton := range response.messages[idx].ButtonRows[rowIdx].CheckboxButtons {
+						newCheckboxButton := checkboxButton
+						if checkboxButton.Active {
+							newCheckboxButton.Text = checkboxEmoji
+						} else {
+							newCheckboxButton.Text = emptyEmoji
+						}
+						response.messages[idx].ButtonRows[rowIdx].CheckboxButtons = append([]bottypes.CheckboxButton{newCheckboxButton}, response.messages[idx].ButtonRows[rowIdx].CheckboxButtons...)
+						response.messages[idx].ButtonRows[rowIdx].CheckboxButtons[checkboxIdx+1].Command.Text = "/nothingness"
+					}
+				}
+			}
 		}
 
 		if slices.Contains(modifiers, RemovableByTrigger) {
@@ -107,4 +150,8 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResp
 
 		return response
 	}
+}
+
+func (handler *Handler) EmptyHandler(params HandlerParams) HandlerResponse {
+	return HandlerResponse{}
 }

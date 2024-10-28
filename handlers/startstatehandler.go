@@ -121,8 +121,13 @@ func (handler *Handler) ShowCommandsHandler(params HandlerParams) HandlerRespons
 			{ChatID: chatID, Text: "Set Info", Command: bottypes.Command{Text: "/set_info_start"}},
 		},
 	}
+	buttonRow7 := bottypes.ButtonRows{
+		Buttons: []bottypes.Button{
+			{ChatID: chatID, Text: "Checkboxes", Command: bottypes.Command{Text: "/checkboxes_start"}},
+		},
+	}
 
-	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3, buttonRow4, buttonRow5, buttonRow6)
+	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3, buttonRow4, buttonRow5, buttonRow6, buttonRow7)
 	res.messages = append(res.messages, retMessage)
 
 	return HandlerResponse{messages: res.messages, nextState: "start-state"}
