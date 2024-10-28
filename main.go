@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
+	"github.com/H1ghN0on/go-tgbot-engine/globalstate"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
 	"github.com/H1ghN0on/go-tgbot-engine/statemachine"
@@ -29,13 +30,15 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		"/create_error",
 		"/level_four_start",
 		"/big_messages",
+		"/set_info_start",
 	)
 
 	levelFourState := statemachine.NewState(
 		"level-four-state",
 
-		"/level_four_one",
+		"/level_four_start",
 
+		"/level_four_start",
 		"/level_four_one",
 		"/level_four_two",
 		"/level_four_three",
@@ -56,11 +59,26 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		"/back_command",
 	)
 
-	startState.SetAvailableStates(*levelFourState, *keyboardState)
+	infoState := statemachine.NewState(
+		"info-state",
+
+		"/set_info_start",
+
+		"/set_info_start",
+		"/set_name",
+		"/set_surname",
+		"/set_age",
+		"/set_info_end",
+		"/back_state",
+		"*",
+	)
+
+	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState)
 	levelFourState.SetAvailableStates(*startState)
 	keyboardState.SetAvailableStates(*startState)
+	infoState.SetAvailableStates((*startState))
 
-	sm.AddStates(*startState, *levelFourState, *keyboardState)
+	sm.AddStates(*startState, *levelFourState, *keyboardState, *infoState)
 
 	err := sm.SetStateByName("start-state")
 	if err != nil {
@@ -99,7 +117,9 @@ func main() {
 	var sm statemachine.StateMachine
 	configurateStateMachine(&sm)
 
-	commandHandler := handlers.NewCommandHandler(&sm)
+	var gs globalstate.GlobalState
+
+	commandHandler := handlers.NewCommandHandler(&sm, &gs)
 
 	client := bot.NewClient(botAPI, commandHandler)
 	client.ListenMessages()
