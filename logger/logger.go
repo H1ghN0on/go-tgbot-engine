@@ -32,6 +32,7 @@ func NewLogger(levelInt int) *Logger {
 		level = Critical
 	default:
 		level = Info
+		fmt.Println("Invalid value for LogLevel. Choosed default LogLevel `INFO`")
 	}
 
 	rootLogger := &Logger{
@@ -56,7 +57,6 @@ func (l *Logger) logMessage(level LogLevel, message string) {
 		return
 	}
 
-	// log time
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
 
 	var levelStr, color string

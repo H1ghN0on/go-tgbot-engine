@@ -80,17 +80,12 @@ func main() {
 	}
 	levelInt, err := strconv.Atoi(loggerStatus)
 	if err != nil {
-		log.Println("Error:", err, "\nChoosed default LogLevel `INFO`")
+		log.Println("strconv.Atoi error:", err)
 		levelInt = 0
 	}
 
 	mainLogger := logger.NewLogger(levelInt)
-
 	mainLogger.Info("This is an info message")
-	mainLogger.Warning("This is a warning message")
-
-	mainLogger.StateMachine.Warning("StateMachine warning")
-	mainLogger.CommandHandler.Critical("CommandHandler error")
 
 	tgBotKey, exists := os.LookupEnv("TELEGRAM_BOT_API")
 	if !exists {
