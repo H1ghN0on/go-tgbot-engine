@@ -2,6 +2,9 @@ package logger
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"strconv"
 	"time"
 )
 
@@ -22,6 +25,43 @@ type Logger struct {
 }
 
 var GlobalLogger = &Logger{}
+
+func InfoLog(message string) {
+	GlobalLogger.Info(message)
+}
+
+func WarningLog(message string) {
+	GlobalLogger.Warning(message)
+}
+
+func CriticalLog(message string) {
+	GlobalLogger.Critical(message)
+}
+
+func StateMachine() *Logger {
+	return GlobalLogger.StateMachine
+}
+
+func CommandHandler() *Logger {
+	return GlobalLogger.CommandHandler
+}
+
+func Bot() *Logger {
+	return GlobalLogger.Bot
+}
+
+func LoggerInit() {
+	loggerStatus, exists := os.LookupEnv("LOGGER_LEVEL")
+	if !exists {
+		log.Println(".env does not contain LOGGER_LEVEL")
+	}
+	levelInt, err := strconv.Atoi(loggerStatus)
+	if err != nil {
+		log.Println("strconv.Atoi error:", err)
+		levelInt = 0
+	}
+	GlobalLogger = NewLogger(levelInt)
+}
 
 func NewLogger(levelInt int) *Logger {
 	var level LogLevel
@@ -51,7 +91,7 @@ func NewLogger(levelInt int) *Logger {
 		level:    level,
 		category: "CommandHandler",
 	}
-    rootLogger.Bot = &Logger{
+	rootLogger.Bot = &Logger{
 		level:    level,
 		category: "Bot",
 	}

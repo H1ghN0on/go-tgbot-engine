@@ -128,7 +128,7 @@ func (ch *CommandHandler) handleBackStateRequest(req bot.CommandHandlerRequester
 
 	previousState := ch.sm.GetPreviousState()
 	if previousState.GetName() == "" {
-		logger.GlobalLogger.CommandHandler.Critical("the last state is empty")
+		logger.CommandHandler().Critical("func GetName error: the last state is empty")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "can not return to previous state"}
 	}
 	ch.sm.SetState(previousState)
@@ -141,9 +141,9 @@ func (ch *CommandHandler) handleBackStateRequest(req bot.CommandHandlerRequester
 	})
 
 	if err != nil {
-		formattedMessage := fmt.Sprintf("back error: %v", err.Error())
-		logger.GlobalLogger.CommandHandler.Critical(formattedMessage)
-		return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back error: %w", err).Error()}
+		errVar := fmt.Errorf("back error: %w", err)
+		logger.CommandHandler().Critical(errVar.Error())
+		return CommandHandlerResponse{}, CommandHandlerError{message: errVar.Error()}
 	}
 
 	if req.ShouldUpdateQueue() {
@@ -161,12 +161,12 @@ func (ch *CommandHandler) handleBackCommandRequest(req bot.CommandHandlerRequest
 	var res CommandHandlerResponse
 
 	if len(ch.commandsQueue) < 2 {
-		logger.GlobalLogger.CommandHandler.Critical("the queue length is less than two")
+		logger.CommandHandler().Critical("the queue length is less than two")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "can not return to previous command"}
 	}
 	lastCommand := ch.commandsQueue[len(ch.commandsQueue)-2]
 	if lastCommand == "" {
-		logger.GlobalLogger.CommandHandler.Critical("the last command is empty")
+		logger.CommandHandler().Critical("the last command is empty")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "can not return to previous command"}
 	}
 
@@ -179,7 +179,7 @@ func (ch *CommandHandler) handleBackCommandRequest(req bot.CommandHandlerRequest
 	})
 
 	if err != nil {
-		logger.GlobalLogger.CommandHandler.Critical("the last command is empty")
+		logger.CommandHandler().Critical("func Handle error: the last command is empty")
 		return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back command error: %w", err).Error()}
 	}
 
@@ -224,7 +224,7 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 	command := receivedMessage.Text
 
 	if !ch.checkCommandInState(command) {
-		logger.GlobalLogger.CommandHandler.Critical("this command is not available")
+		logger.CommandHandler().Critical("this command is not available")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available"}
 	}
 
@@ -256,9 +256,9 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 		case "/back_command":
 			handleRes, err := ch.handleBackCommandRequest(req)
 			if err != nil {
-				formattedMessage := fmt.Sprintf("back command error: %v", err.Error())
-				logger.GlobalLogger.CommandHandler.Critical(formattedMessage)
-				return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back command error: %w", err).Error()}
+				errVar := fmt.Errorf("back command error %w", err)
+				logger.CommandHandler().Critical(errVar.Error())
+				return CommandHandlerResponse{}, CommandHandlerError{message: errVar.Error()}
 			}
 			return handleRes, nil
 
@@ -266,22 +266,22 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 			handleRes, err := ch.handleBackStateRequest(req)
 
 			if err != nil {
-				formattedMessage := fmt.Sprintf("back state error: %v", err.Error())
-				logger.GlobalLogger.CommandHandler.Critical(formattedMessage)
-				return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back state error: %w", err).Error()}
+				errVar := fmt.Errorf("back state error %w", err)
+				logger.CommandHandler().Critical(errVar.Error())
+				return CommandHandlerResponse{}, CommandHandlerError{message: errVar.Error()}
 			}
 			return handleRes, nil
 		case "/create_error":
-			logger.GlobalLogger.CommandHandler.Critical("this command is unknown")
+			logger.CommandHandler().Critical("special created error")
 			return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown"}
 		default:
-			logger.GlobalLogger.CommandHandler.Critical("this command is unknown")
+			logger.CommandHandler().Critical("this command is unknown")
 			return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown"}
 		}
 	}
 
 	if hasMultipleStatesInCommand(res) {
-		logger.GlobalLogger.CommandHandler.Critical("multiple states in commands are forbidden")
+		logger.CommandHandler().Critical("multiple states in commands are forbidden")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "multiple states in commands are forbidden"}
 	}
 
@@ -293,9 +293,9 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 		}
 		err := ch.sm.SetStateByName(response.NextState())
 		if err != nil {
-			formattedMessage := fmt.Sprintf("handler error: %v", err.Error())
-			logger.GlobalLogger.CommandHandler.Critical(formattedMessage)
-			return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("handler error: %w", err).Error()}
+			errVar := fmt.Errorf("handle error: %w", err)
+			logger.CommandHandler().Critical(errVar.Error())
+			return CommandHandlerResponse{}, CommandHandlerError{message: errVar.Error()}
 		}
 		stateResponses := ch.moveToAnotherState(receivedMessage)
 		if stateResponses != nil {

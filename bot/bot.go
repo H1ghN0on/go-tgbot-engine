@@ -67,7 +67,7 @@ func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.Message, in
 
 		callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 		if _, err := client.api.Request(callback); err != nil {
-			logger.GlobalLogger.Bot.Critical("callback request failed")
+			logger.Bot().Critical(fmt.Sprintf("callback request failed: %s", err.Error()))
 			return bottypes.Message{}, chatID, BotError{message: "callback request failed"}
 		}
 
@@ -77,7 +77,7 @@ func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.Message, in
 			Text:   update.CallbackQuery.Data}
 
 	} else {
-		logger.GlobalLogger.Bot.Critical("unknown message received")
+		logger.Bot().Critical(fmt.Sprintf("unknown message received: %s", receivedMessage.Text))
 		return bottypes.Message{}, 0, BotError{message: "unknown message received"}
 	}
 
@@ -94,7 +94,7 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 	if message.Text != "" && len(message.ButtonRows) == 0 {
 		_, err := client.api.Request(tgbotapi.NewEditMessageText(client.lastMessage.ChatID, client.lastMessage.ID, message.Text))
 		if err != nil {
-			logger.GlobalLogger.Bot.Critical(err.Error())
+			logger.Bot().Critical(fmt.Sprintf("message text edit failed: %s", err.Error()))
 			return err
 		}
 		return nil
@@ -103,7 +103,7 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 	if message.Text != "" && len(message.ButtonRows) != 0 {
 		_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard))
 		if err != nil {
-			logger.GlobalLogger.Bot.Critical(err.Error())
+			logger.Bot().Critical(fmt.Sprintf("message text edit failed: %s", err.Error()))
 			return err
 		}
 		return nil
@@ -112,12 +112,12 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 	if message.Text == "" && len(message.ButtonRows) != 0 {
 		_, err := client.api.Request(tgbotapi.NewEditMessageReplyMarkup(client.lastMessage.ChatID, client.lastMessage.ID, keyboard))
 		if err != nil {
-			logger.GlobalLogger.Bot.Critical(err.Error())
+			logger.Bot().Critical(fmt.Sprintf("message text edit failed: %s", err.Error()))
 			return err
 		}
 		return nil
 	}
-	logger.GlobalLogger.Bot.Critical("keyboard setup error")
+	logger.Bot().Critical("keyboard setup error")
 	return fmt.Errorf("keyboard setup error")
 }
 
@@ -142,9 +142,9 @@ func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isR
 	if isKeyboard && client.lastMessage.ID != 0 {
 		err := client.SetupKeyboard(message, keyboard)
 		if err != nil {
-			formattedMessage := fmt.Sprintf("Send message error:  %v", err.Error())
-			logger.GlobalLogger.Bot.Critical(formattedMessage)
-			return BotError{message: "Send message error: " + err.Error()}
+			errVar := fmt.Errorf("send message error: %w", err)
+			logger.Bot().Critical(errVar.Error())
+			return BotError{message: errVar.Error()}
 		}
 
 		if isRemovableByTrigger && !slices.ContainsFunc(client.messagesToRemove, client.compareMessages(client.lastMessage)) {
@@ -156,9 +156,9 @@ func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isR
 
 	sent, err := client.api.Send(msg)
 	if err != nil {
-		formattedMessage := fmt.Sprintf("Send message error:  %v", err.Error())
-		logger.GlobalLogger.Bot.Critical(formattedMessage)
-		return BotError{message: "Send message error: " + err.Error()}
+		errVar := fmt.Errorf("send message error: %w", err)
+		logger.Bot().Critical(errVar.Error())
+		return BotError{message: errVar.Error()}
 	}
 
 	client.lastMessage = bottypes.Message{
@@ -176,7 +176,7 @@ func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isR
 
 func (client *Client) sendErrorMessage(chatID int64, err error) {
 	if chatID == 0 {
-		logger.GlobalLogger.Bot.Critical("unknown chat ID")
+		logger.Bot().Critical("unknown chat ID")
 		panic("unknown chat ID")
 	}
 
@@ -186,7 +186,8 @@ func (client *Client) sendErrorMessage(chatID int64, err error) {
 
 	sendErr := client.SendMessage(responseMessage, false, false)
 	if sendErr != nil {
-		logger.GlobalLogger.Bot.Critical(sendErr.Error())
+		logger.Bot().Critical(sendErr.Error())
+		panic(sendErr)
 	}
 }
 
@@ -215,9 +216,9 @@ func (client *Client) removeMessagesByTrigger() error {
 		}
 		_, err := client.api.Request(msgToDelete)
 		if err != nil {
-			formattedMessage := fmt.Sprintf("remove error:  %v", err.Error())
-			logger.GlobalLogger.Bot.Critical(formattedMessage)
-			return fmt.Errorf("remove error: %w", err)
+			errVar := fmt.Errorf("remove error: %w", err)
+			logger.Bot().Critical(errVar.Error())
+			return errVar
 		}
 	}
 
@@ -235,18 +236,18 @@ func (client *Client) ListenMessages() {
 
 		receivedMessage, chatID, err := client.parseMessage(update)
 		if err != nil {
-			formattedMessage := fmt.Sprintf("parse error:  %v", err.Error())
-			logger.GlobalLogger.Bot.Critical(formattedMessage)
-			client.sendErrorMessage(chatID, fmt.Errorf("parse error: %w", err))
+			errVar := fmt.Errorf("parse error: %w", err)
+			logger.Bot().Critical(errVar.Error())
+			client.sendErrorMessage(chatID, errVar)
 			continue
 		}
 
 		req := client.cmdhandler.NewCommandHandlerRequest(receivedMessage, true)
 		handlerResult, err := client.cmdhandler.Handle(req)
 		if err != nil {
-			formattedMessage := fmt.Sprintf("handle command error:  %v", err.Error())
-			logger.GlobalLogger.Bot.Critical(formattedMessage)
-			client.sendErrorMessage(chatID, fmt.Errorf("handle command error: %w", err))
+			errVar := fmt.Errorf("handle command error: %w", err)
+			logger.Bot().Critical(errVar.Error())
+			client.sendErrorMessage(chatID, errVar)
 			continue
 		}
 
@@ -254,7 +255,8 @@ func (client *Client) ListenMessages() {
 			for _, v := range response.GetMessages() {
 				err := client.SendMessage(v, response.IsKeyboard(), response.IsRemovableByTrigger())
 				if err != nil {
-					logger.GlobalLogger.Bot.Critical(err.Error())
+					logger.Bot().Critical(err.Error())
+					panic(err)
 				}
 			}
 		}
@@ -262,7 +264,8 @@ func (client *Client) ListenMessages() {
 		if handlerResult.TriggerRemove() {
 			err := client.removeMessagesByTrigger()
 			if err != nil {
-				logger.GlobalLogger.Bot.Critical(err.Error())
+				logger.Bot().Critical(fmt.Sprintf("func removeMessagesByTrigger error: %s",err.Error()))
+				panic(err)
 			}
 		}
 	}
