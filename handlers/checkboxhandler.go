@@ -19,12 +19,12 @@ func NewCheckboxHandler(gs GlobalStater) *CheckboxHandler {
 
 	sh.commands = map[string][]func(params HandlerParams) HandlerResponse{
 		"/checkboxes_start": {sh.SetCheckboxesStartHandler,
-			sh.ModifyHandler(sh.InitCheckboxesHandler, []int{CheckboxableTwo, Keyboardable})},
-		"/checkboxes_first":  {sh.ModifyHandler(sh.FirstCheckboxHandler, []int{CheckboxableTwo, Keyboardable})},
-		"/checkboxes_second": {sh.ModifyHandler(sh.SecondCheckboxHandler, []int{CheckboxableTwo, Keyboardable})},
-		"/checkboxes_third":  {sh.ModifyHandler(sh.ThirdCheckboxHandler, []int{CheckboxableTwo, Keyboardable})},
-		"/checkboxes_fourth": {sh.ModifyHandler(sh.FourthCheckboxHandler, []int{CheckboxableTwo, Keyboardable})},
-		"/checkboxes_accept": {sh.AcceptCheckboxHandler},
+			sh.ModifyHandler(sh.InitCheckboxesHandler, []int{CheckboxableTwo, KeyboardStarter})},
+		"/checkboxes_first":  {sh.ModifyHandler(sh.FirstCheckboxHandler, []int{CheckboxableTwo, KeyboardStarter})},
+		"/checkboxes_second": {sh.ModifyHandler(sh.SecondCheckboxHandler, []int{CheckboxableTwo, KeyboardStarter})},
+		"/checkboxes_third":  {sh.ModifyHandler(sh.ThirdCheckboxHandler, []int{CheckboxableTwo, KeyboardStarter})},
+		"/checkboxes_fourth": {sh.ModifyHandler(sh.FourthCheckboxHandler, []int{CheckboxableTwo, KeyboardStarter})},
+		"/checkboxes_accept": {sh.ModifyHandler(sh.AcceptCheckboxHandler, []int{KeyboardStopper})},
 		"/nothingness":       {sh.ModifyHandler(sh.EmptyHandler, []int{Nothingness})},
 	}
 

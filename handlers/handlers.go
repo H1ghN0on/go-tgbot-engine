@@ -10,7 +10,8 @@ const (
 	StateBackable = iota
 	CommandBackable
 	RemovableByTrigger
-	Keyboardable
+	KeyboardStarter
+	KeyboardStopper
 	RemoveTriggerer
 	CheckboxableOne
 	CheckboxableTwo
@@ -45,12 +46,9 @@ type HandlerParams struct {
 }
 
 type HandlerResponse struct {
-	messages             []bottypes.Message
-	nextState            string
-	isKeyboard           bool
-	isRemovableByTrigger bool
-	isRemoveTriggered    bool
-	isNothing            bool
+	messages  []bottypes.Message
+	nextState string
+	triggers  []bottypes.Trigger
 }
 
 func (hr HandlerResponse) GetMessages() []bottypes.Message {
@@ -61,12 +59,8 @@ func (hr HandlerResponse) NextState() string {
 	return hr.nextState
 }
 
-func (hr HandlerResponse) IsKeyboard() bool {
-	return hr.isKeyboard
-}
-
-func (hr HandlerResponse) IsRemovableByTrigger() bool {
-	return hr.isRemovableByTrigger
+func (hr HandlerResponse) ContainsTrigger(trigger bottypes.Trigger) bool {
+	return slices.Contains(hr.triggers, trigger)
 }
 
 func NewHandler(gs GlobalStater) *Handler {
@@ -79,7 +73,7 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResp
 	return func(params HandlerParams) HandlerResponse {
 		if slices.Contains(modifiers, Nothingness) {
 			return HandlerResponse{
-				isNothing: true,
+				triggers: []bottypes.Trigger{bottypes.NothingTrigger},
 			}
 		}
 
@@ -115,7 +109,6 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResp
 						}
 					}
 				}
-
 			}
 
 			if slices.Contains(modifiers, CheckboxableTwo) {
@@ -137,15 +130,19 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResp
 		}
 
 		if slices.Contains(modifiers, RemovableByTrigger) {
-			response.isRemovableByTrigger = true
+			response.triggers = append(response.triggers, bottypes.AddToNextRemoveTrigger)
 		}
 
-		if slices.Contains(modifiers, Keyboardable) {
-			response.isKeyboard = true
+		if slices.Contains(modifiers, KeyboardStarter) {
+			response.triggers = append(response.triggers, bottypes.StartKeyboardTrigger)
+		}
+
+		if slices.Contains(modifiers, KeyboardStopper) {
+			response.triggers = append(response.triggers, bottypes.StopKeyboardTrigger)
 		}
 
 		if slices.Contains(modifiers, RemoveTriggerer) {
-			response.isRemoveTriggered = true
+			response.triggers = append(response.triggers, bottypes.RemoveTrigger)
 		}
 
 		return response

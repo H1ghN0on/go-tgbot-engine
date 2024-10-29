@@ -18,17 +18,17 @@ func (err BotError) Error() string {
 }
 
 type Client struct {
-	cmdhandler       CommandHandler
-	api              *tgbotapi.BotAPI
-	lastMessage      bottypes.Message
-	messagesToRemove []bottypes.Message
+	cmdhandler          CommandHandler
+	api                 *tgbotapi.BotAPI
+	lastMessage         bottypes.Message
+	messagesToRemove    []bottypes.Message
+	lastKeyboardMessage bottypes.Message
 }
 
 type HandlerResponser interface {
 	GetMessages() []bottypes.Message
 	NextState() string
-	IsKeyboard() bool
-	IsRemovableByTrigger() bool
+	ContainsTrigger(bottypes.Trigger) bool
 }
 
 type CommandHandlerRequester interface {
@@ -38,8 +38,6 @@ type CommandHandlerRequester interface {
 
 type CommandHandlerResponser interface {
 	GetResponses() []HandlerResponser
-	TriggerRemove() bool
-	IsNothing() bool
 }
 
 type CommandHandler interface {
@@ -87,7 +85,13 @@ func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.Message, in
 
 func (client Client) compareMessages(a bottypes.Message) func(bottypes.Message) bool {
 	return func(b bottypes.Message) bool {
-		return a.ChatID == b.ChatID
+		return a.ChatID == b.ChatID && a.ID == b.ID
+	}
+}
+
+func (client *Client) addToRemoveMessagesQueue(message bottypes.Message) {
+	if !slices.ContainsFunc(client.messagesToRemove, client.compareMessages(message)) {
+		client.messagesToRemove = append(client.messagesToRemove, message)
 	}
 }
 
@@ -95,15 +99,25 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 	hasText := message.Text != ""
 	hasButtons := len(message.ButtonRows) != 0
 
+	var attachMessage bottypes.Message
+	if client.lastKeyboardMessage.ID != 0 {
+		attachMessage = client.lastKeyboardMessage
+	} else if client.lastMessage.ID != 0 {
+		attachMessage = client.lastMessage
+		client.lastKeyboardMessage = client.lastMessage
+	} else {
+		return fmt.Errorf("keyboard is no message to attach")
+	}
+
 	if hasText {
 		if hasButtons {
-			_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard))
+			_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(attachMessage.ChatID, attachMessage.ID, message.Text, keyboard))
 			if err != nil {
 				return err
 			}
 			return nil
 		} else {
-			_, err := client.api.Request(tgbotapi.NewEditMessageText(client.lastMessage.ChatID, client.lastMessage.ID, message.Text))
+			_, err := client.api.Request(tgbotapi.NewEditMessageText(attachMessage.ChatID, attachMessage.ID, message.Text))
 			if err != nil {
 				return err
 			}
@@ -111,7 +125,7 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 		}
 	} else {
 		if hasButtons {
-			_, err := client.api.Request(tgbotapi.NewEditMessageReplyMarkup(client.lastMessage.ChatID, client.lastMessage.ID, keyboard))
+			_, err := client.api.Request(tgbotapi.NewEditMessageReplyMarkup(attachMessage.ChatID, attachMessage.ID, keyboard))
 			if err != nil {
 				return err
 			}
@@ -122,15 +136,13 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 	return fmt.Errorf("keyboard setup error")
 }
 
-func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isRemovableByTrigger bool) error {
-
-	if message.ChatID == 0 {
-		return nil
-	}
-
+func (client *Client) PrepareKeyboard(message bottypes.Message) (tgbotapi.InlineKeyboardMarkup, bool) {
 	var keyboard tgbotapi.InlineKeyboardMarkup
 
-	msg := tgbotapi.NewMessage(message.ChatID, message.Text)
+	if len(message.ButtonRows) == 0 {
+		return tgbotapi.InlineKeyboardMarkup{}, false
+	}
+
 	if len(message.ButtonRows) > 0 {
 		var buttonRows [][]tgbotapi.InlineKeyboardButton
 		for _, buttonRow := range message.ButtonRows {
@@ -145,20 +157,33 @@ func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isR
 		}
 
 		keyboard = tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
-		msg.ReplyMarkup = keyboard
 	}
 
-	if isKeyboard && client.lastMessage.ID != 0 {
+	return keyboard, true
+}
+
+func (client *Client) SendKeyboard(message bottypes.Message) error {
+	keyboard, exists := client.PrepareKeyboard(message)
+
+	if !exists {
+		return BotError{message: "Send keyboard error: no keyboard"}
+	}
+
+	if client.lastMessage.ID != 0 || client.lastKeyboardMessage.ID != 0 {
 		err := client.SetupKeyboard(message, keyboard)
 		if err != nil {
-			return BotError{message: "Send message error: " + err.Error()}
+			return BotError{message: "Send keyboard error: " + err.Error()}
 		}
+	}
+	return nil
+}
 
-		if isRemovableByTrigger && !slices.ContainsFunc(client.messagesToRemove, client.compareMessages(client.lastMessage)) {
-			client.messagesToRemove = append(client.messagesToRemove, client.lastMessage)
-		}
+func (client *Client) SendMessage(message bottypes.Message) error {
 
-		return nil
+	msg := tgbotapi.NewMessage(message.ChatID, message.Text)
+	keyboard, exists := client.PrepareKeyboard(message)
+	if exists {
+		msg.ReplyMarkup = keyboard
 	}
 
 	sent, err := client.api.Send(msg)
@@ -170,10 +195,6 @@ func (client *Client) SendMessage(message bottypes.Message, isKeyboard bool, isR
 		ID:     sent.MessageID,
 		ChatID: sent.Chat.ID,
 		Text:   sent.Text,
-	}
-
-	if isRemovableByTrigger {
-		client.messagesToRemove = append(client.messagesToRemove, client.lastMessage)
 	}
 
 	return nil
@@ -188,7 +209,7 @@ func (client *Client) sendErrorMessage(chatID int64, err error) {
 	responseMessage.ChatID = chatID
 	responseMessage.Text = err.Error()
 
-	sendErr := client.SendMessage(responseMessage, false, false)
+	sendErr := client.SendMessage(responseMessage)
 	if sendErr != nil {
 		panic(sendErr)
 	}
@@ -248,23 +269,53 @@ func (client *Client) ListenMessages() {
 			continue
 		}
 
-		if handlerResult.IsNothing() {
-			continue
-		}
-
 		for _, response := range handlerResult.GetResponses() {
-			for _, v := range response.GetMessages() {
-				err := client.SendMessage(v, response.IsKeyboard(), response.IsRemovableByTrigger())
+			for _, message := range response.GetMessages() {
+				if message.ChatID == 0 {
+					panic("Chat ID = 0")
+				}
+
+				if response.ContainsTrigger(bottypes.NothingTrigger) {
+					continue
+				}
+
+				if response.ContainsTrigger(bottypes.StartKeyboardTrigger) {
+					err := client.SendKeyboard(message)
+
+					if err != nil {
+						panic(err)
+					}
+
+					if response.ContainsTrigger(bottypes.AddToNextRemoveTrigger) {
+						if client.lastKeyboardMessage.ID != 0 {
+							client.addToRemoveMessagesQueue(client.lastKeyboardMessage)
+						} else {
+							client.addToRemoveMessagesQueue(client.lastMessage)
+						}
+					}
+
+				} else {
+					err := client.SendMessage(message)
+
+					if err != nil {
+						panic(err)
+					}
+
+					if response.ContainsTrigger(bottypes.AddToNextRemoveTrigger) {
+						client.addToRemoveMessagesQueue(client.lastMessage)
+					}
+				}
+
+			}
+			if response.ContainsTrigger(bottypes.RemoveTrigger) {
+				err := client.removeMessagesByTrigger()
 				if err != nil {
 					panic(err)
 				}
-			}
-		}
 
-		if handlerResult.TriggerRemove() {
-			err := client.removeMessagesByTrigger()
-			if err != nil {
-				panic(err)
+				if response.ContainsTrigger(bottypes.StopKeyboardTrigger) {
+					client.lastKeyboardMessage = bottypes.Message{}
+				}
 			}
 		}
 	}

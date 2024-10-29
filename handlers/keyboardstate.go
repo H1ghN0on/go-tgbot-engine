@@ -12,10 +12,10 @@ func NewKeyboardhandler(gs GlobalStater) *KeyboardHandler {
 	h.gs = gs
 
 	h.commands = map[string][]func(params HandlerParams) HandlerResponse{
-		"/keyboard_start": {h.ModifyHandler(h.KeyboardStartHandler, []int{StateBackable, Keyboardable, RemovableByTrigger})},
-		"/keyboard_one":   {h.ModifyHandler(h.KeyboardOneHandler, []int{CommandBackable, Keyboardable, RemovableByTrigger})},
-		"/keyboard_two":   {h.ModifyHandler(h.KeyboardTwoHandler, []int{CommandBackable, Keyboardable, RemovableByTrigger})},
-		"/keyboard_three": {h.ModifyHandler(h.KeyboardThreeHandler, []int{RemoveTriggerer})},
+		"/keyboard_start": {h.ModifyHandler(h.KeyboardStartHandler, []int{StateBackable, KeyboardStarter, RemovableByTrigger})},
+		"/keyboard_one":   {h.ModifyHandler(h.KeyboardOneHandler, []int{CommandBackable, KeyboardStarter, RemovableByTrigger})},
+		"/keyboard_two":   {h.ModifyHandler(h.KeyboardTwoHandler, []int{CommandBackable, KeyboardStarter, RemovableByTrigger})},
+		"/keyboard_three": {h.ModifyHandler(h.KeyboardThreeHandler, []int{RemoveTriggerer, KeyboardStopper})},
 	}
 
 	return h
