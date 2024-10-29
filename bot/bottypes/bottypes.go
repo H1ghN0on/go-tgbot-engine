@@ -10,8 +10,16 @@ type Button struct {
 	Command Command
 }
 
+type CheckboxButton struct {
+	ChatID  int64
+	Text    string
+	Command Command
+	Active  bool
+}
+
 type ButtonRows struct {
-	Buttons []Button
+	Buttons         []Button
+	CheckboxButtons []CheckboxButton
 }
 
 type Message struct {

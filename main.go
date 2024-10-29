@@ -31,6 +31,7 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		"/level_four_start",
 		"/big_messages",
 		"/set_info_start",
+		"/checkboxes_start",
 	)
 
 	levelFourState := statemachine.NewState(
@@ -73,12 +74,27 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		"*",
 	)
 
-	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState)
+	checkboxState := statemachine.NewState(
+		"checkbox-state",
+
+		"/checkboxes_start",
+
+		"/checkboxes_start",
+		"/checkboxes_first",
+		"/checkboxes_second",
+		"/checkboxes_third",
+		"/checkboxes_fourth",
+		"/checkboxes_accept",
+		"/nothingness",
+	)
+
+	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState)
 	levelFourState.SetAvailableStates(*startState)
 	keyboardState.SetAvailableStates(*startState)
 	infoState.SetAvailableStates((*startState))
+	checkboxState.SetAvailableStates((*startState))
 
-	sm.AddStates(*startState, *levelFourState, *keyboardState, *infoState)
+	sm.AddStates(*startState, *levelFourState, *keyboardState, *infoState, *checkboxState)
 
 	err := sm.SetStateByName("start-state")
 	if err != nil {
