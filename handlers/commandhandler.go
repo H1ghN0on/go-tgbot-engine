@@ -74,9 +74,7 @@ func (req CommandHandlerRequest) ShouldUpdateQueue() bool {
 }
 
 type CommandHandlerResponse struct {
-	responses     []HandlerResponse
-	triggerRemove bool
-	isNothing     bool
+	responses []HandlerResponse
 }
 
 func (chr CommandHandlerResponse) GetResponses() []bot.HandlerResponser {
@@ -86,14 +84,6 @@ func (chr CommandHandlerResponse) GetResponses() []bot.HandlerResponser {
 		convertedResponses = append(convertedResponses, response)
 	}
 	return convertedResponses
-}
-
-func (chr CommandHandlerResponse) TriggerRemove() bool {
-	return chr.triggerRemove
-}
-
-func (chr CommandHandlerResponse) IsNothing() bool {
-	return chr.isNothing
 }
 
 type CommandHandler struct {
@@ -152,7 +142,9 @@ func (ch *CommandHandler) handleBackStateRequest(req bot.CommandHandlerRequester
 	}
 
 	res = handleRes.(CommandHandlerResponse)
-	res.triggerRemove = true
+	res.responses = append(res.responses, HandlerResponse{
+		triggers: []bottypes.Trigger{bottypes.RemoveTrigger, bottypes.StopKeyboardTrigger},
+	})
 
 	return res, nil
 }
@@ -290,18 +282,6 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 			res.responses = append(res.responses, stateResponses...)
 		}
 		break
-	}
-
-	// Remove trigger marked messages if needed
-
-	for _, response := range res.responses {
-		if response.isNothing {
-			res.isNothing = true
-		}
-
-		if response.isRemoveTriggered {
-			res.triggerRemove = true
-		}
 	}
 
 	return res, nil

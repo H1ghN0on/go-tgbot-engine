@@ -28,3 +28,13 @@ type Message struct {
 	Text       string
 	ButtonRows []ButtonRows
 }
+
+type Trigger int
+
+const (
+	RemoveTrigger          Trigger = iota
+	AddToNextRemoveTrigger Trigger = iota
+	StartKeyboardTrigger   Trigger = iota
+	StopKeyboardTrigger    Trigger = iota
+	NothingTrigger         Trigger = iota
+)
