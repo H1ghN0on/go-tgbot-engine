@@ -99,17 +99,20 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 	hasText := message.Text != ""
 	hasButtons := len(message.ButtonRows) != 0
 
-	var attachMessage bottypes.Message
-	if client.lastKeyboardMessage.ID != 0 {
-		attachMessage = client.lastKeyboardMessage
-	} else if client.lastMessage.ID != 0 {
-		attachMessage = client.lastMessage
-		client.lastKeyboardMessage = client.lastMessage
-	} else {
+	if client.lastMessage.ID == 0 {
 		return fmt.Errorf("keyboard is no message to attach")
 	}
 
-	if hasText {
+	if client.lastKeyboardMessage.ID == 0 {
+		client.lastKeyboardMessage.ID = client.lastMessage.ID
+	}
+
+	client.lastKeyboardMessage.ChatID = message.ChatID
+	client.lastKeyboardMessage.Text = message.Text
+	client.lastKeyboardMessage.ButtonRows = message.ButtonRows
+	attachMessage := client.lastKeyboardMessage
+
+	if hasText && message.Text != client.lastMessage.Text {
 		if hasButtons {
 			_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(attachMessage.ChatID, attachMessage.ID, message.Text, keyboard))
 			if err != nil {
@@ -169,12 +172,37 @@ func (client *Client) SendKeyboard(message bottypes.Message) error {
 		return BotError{message: "Send keyboard error: no keyboard"}
 	}
 
-	if client.lastMessage.ID != 0 || client.lastKeyboardMessage.ID != 0 {
-		err := client.SetupKeyboard(message, keyboard)
+	if client.lastMessage.ID == 0 {
+		err := client.SendText(bottypes.Message{ChatID: message.ChatID, Text: message.Text})
 		if err != nil {
 			return BotError{message: "Send keyboard error: " + err.Error()}
 		}
 	}
+
+	err := client.SetupKeyboard(message, keyboard)
+	if err != nil {
+		return BotError{message: "Send keyboard error: " + err.Error()}
+	}
+
+	return nil
+}
+
+func (client *Client) SendText(message bottypes.Message) error {
+
+	msg := tgbotapi.NewMessage(message.ChatID, message.Text)
+
+	sent, err := client.api.Send(msg)
+	if err != nil {
+		return BotError{message: "Send message error: " + err.Error()}
+	}
+
+	client.lastMessage = bottypes.Message{
+		ID:         sent.MessageID,
+		ChatID:     sent.Chat.ID,
+		Text:       sent.Text,
+		ButtonRows: message.ButtonRows,
+	}
+
 	return nil
 }
 
@@ -192,9 +220,10 @@ func (client *Client) SendMessage(message bottypes.Message) error {
 	}
 
 	client.lastMessage = bottypes.Message{
-		ID:     sent.MessageID,
-		ChatID: sent.Chat.ID,
-		Text:   sent.Text,
+		ID:         sent.MessageID,
+		ChatID:     sent.Chat.ID,
+		Text:       sent.Text,
+		ButtonRows: message.ButtonRows,
 	}
 
 	return nil
@@ -312,10 +341,10 @@ func (client *Client) ListenMessages() {
 				if err != nil {
 					panic(err)
 				}
+			}
 
-				if response.ContainsTrigger(bottypes.StopKeyboardTrigger) {
-					client.lastKeyboardMessage = bottypes.Message{}
-				}
+			if response.ContainsTrigger(bottypes.StopKeyboardTrigger) {
+				client.lastKeyboardMessage = bottypes.Message{}
 			}
 		}
 	}

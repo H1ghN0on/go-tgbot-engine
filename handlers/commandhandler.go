@@ -143,7 +143,7 @@ func (ch *CommandHandler) handleBackStateRequest(req bot.CommandHandlerRequester
 
 	res = handleRes.(CommandHandlerResponse)
 	res.responses = append(res.responses, HandlerResponse{
-		triggers: []bottypes.Trigger{bottypes.RemoveTrigger},
+		triggers: []bottypes.Trigger{bottypes.RemoveTrigger, bottypes.StopKeyboardTrigger},
 	})
 
 	return res, nil
