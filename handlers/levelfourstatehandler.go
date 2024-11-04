@@ -119,6 +119,7 @@ func (handler *Handler) LevelFourFourHandler(params HandlerParams) HandlerRespon
 
 	chatID := params.message.ChatID
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "FOUR!"})
+	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
 
-	return HandlerResponse{messages: res.messages, nextState: "start-state"}
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}
 }

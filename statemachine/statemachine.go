@@ -19,6 +19,7 @@ type State struct {
 	startCommand      string
 	availableCommands []string
 	availableStates   []State
+	canRestart        bool
 }
 
 type StateMachineError struct {
@@ -56,11 +57,16 @@ func (state *State) SetAvailableStates(newStates ...handlers.Stater) {
 	}
 }
 
+func (state State) CanRestart() bool {
+	return state.canRestart
+}
+
 func NewState(name string, startCommand string, availableCommands ...string) *State {
 	return &State{
 		name:              name,
 		startCommand:      startCommand,
 		availableCommands: availableCommands,
+		canRestart:        false,
 	}
 }
 
@@ -92,10 +98,6 @@ func (sm *StateMachine) SetState(state handlers.Stater) error {
 	idx := slices.IndexFunc(sm.states, sm.CompareStates(state.(State)))
 	if idx == -1 {
 		return StateMachineError{message: "This state is not unavailable"}
-	}
-
-	if sm.activeState.GetName() == state.GetName() {
-		return nil
 	}
 
 	if sm.activeState.GetName() == "" || slices.ContainsFunc(sm.activeState.availableStates, sm.CompareStates(sm.states[idx])) {

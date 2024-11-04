@@ -46,9 +46,10 @@ type HandlerParams struct {
 }
 
 type HandlerResponse struct {
-	messages  []bottypes.Message
-	nextState string
-	triggers  []bottypes.Trigger
+	messages           []bottypes.Message
+	triggers           []bottypes.Trigger
+	nextState          string
+	postCommandsHandle []string
 }
 
 func (hr HandlerResponse) GetMessages() []bottypes.Message {

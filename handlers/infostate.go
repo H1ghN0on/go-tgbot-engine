@@ -16,10 +16,11 @@ func NewSetInfoHandler(gs GlobalStater) *SetInfoHandler {
 	sh.commands = map[string][]func(params HandlerParams) HandlerResponse{
 		"/set_info_start": {
 			sh.SetInfoStartHandler,
-			sh.SetNameHandler},
-		"/set_name":    {sh.SetSurnameHandler},
-		"/set_surname": {sh.SetAgeHandler},
-		"/set_age":     {sh.SetInfoEndHandler},
+		},
+		"/set_name":     {sh.SetNameHandler},
+		"/set_surname":  {sh.SetSurnameHandler},
+		"/set_age":      {sh.SetAgeHandler},
+		"/set_info_end": {sh.SetInfoEndHandler},
 	}
 
 	sh.commandSequence = map[int]string{
@@ -27,6 +28,7 @@ func NewSetInfoHandler(gs GlobalStater) *SetInfoHandler {
 		1: "/set_name",
 		2: "/set_surname",
 		3: "/set_age",
+		4: "/set_info_end",
 	}
 
 	sh.active = 0
@@ -72,8 +74,9 @@ func (handler *SetInfoHandler) SetInfoStartHandler(params HandlerParams) Handler
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Let me know you a bit closer"}
 	res.messages = append(res.messages, retMessage)
+	res.postCommandsHandle = append(res.postCommandsHandle, "/set_name")
 
-	return HandlerResponse{messages: res.messages, nextState: "info-state"}
+	return HandlerResponse{messages: res.messages, nextState: "info-state", postCommandsHandle: res.postCommandsHandle}
 }
 
 func (handler *Handler) SetNameHandler(params HandlerParams) HandlerResponse {
@@ -125,5 +128,7 @@ func (handler *Handler) SetInfoEndHandler(params HandlerParams) HandlerResponse 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "My gratitude"}
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages, nextState: "start-state"}
+	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
+
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}
 }

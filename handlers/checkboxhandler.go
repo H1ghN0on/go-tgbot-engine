@@ -159,7 +159,9 @@ func (handler *CheckboxHandler) AcceptCheckboxHandler(params HandlerParams) Hand
 		res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "Fourth"})
 	}
 
-	return HandlerResponse{messages: res.messages, nextState: "start-state"}
+	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
+
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}
 }
 
 func (handler *CheckboxHandler) gatherAllCheckboxes(chatID int64) []bottypes.ButtonRows {
