@@ -49,13 +49,14 @@ type GlobalStater interface {
 type Handlerable interface {
 	GetCommands() []string
 	InitHandler()
-	Handle(command string, params HandlerParams) ([]HandlerResponse, bool)
+	Handle(command string, params HandlerParams) ([]HandlerResponse, bool, error)
 	DeinitHandler()
 }
 
 type BackHandlerable interface {
 	Handlerable
 	UpdateLastCommand(command string)
+	ClearCommandQueue()
 }
 
 type CommandHandlerError struct {
@@ -119,12 +120,12 @@ func (ch *CommandHandler) updateState(res CommandHandlerResponse) error {
 		}
 
 		err := ch.sm.SetStateByName(response.NextState())
+		ch.backHandler.ClearCommandQueue()
 		if err != nil {
 			return CommandHandlerError{message: fmt.Errorf("handler error: %w", err).Error()}
 		}
 		break
 	}
-
 	return nil
 }
 
@@ -156,11 +157,35 @@ func (ch *CommandHandler) handleCommand(command string, receivedMessage bottypes
 
 	for _, handler := range ch.handlers {
 		if slices.Contains(handler.GetCommands(), command) || ch.activeHandler != nil {
-			if ch.activeHandler == nil {
+
+			if ch.activeHandler != nil {
+				if slices.Contains(ch.backHandler.GetCommands(), command) {
+					responses, isFinished, err := ch.backHandler.Handle(command, HandlerParams{message: receivedMessage})
+
+					if err != nil {
+						return CommandHandlerResponse{}, CommandHandlerError{message: err.Error()}
+					}
+
+					if isFinished {
+						ch.activeHandler.DeinitHandler()
+						ch.activeHandler = nil
+					}
+					ch.backHandler.UpdateLastCommand(command)
+					res.responses = responses
+					break
+				}
+
+			} else {
 				ch.activeHandler = handler
 				ch.activeHandler.InitHandler()
 			}
-			responses, isFinished := ch.activeHandler.Handle(command, HandlerParams{message: receivedMessage})
+
+			responses, isFinished, err := ch.activeHandler.Handle(command, HandlerParams{message: receivedMessage})
+
+			if err != nil {
+				return CommandHandlerResponse{}, CommandHandlerError{message: err.Error()}
+			}
+
 			if isFinished {
 				ch.activeHandler.DeinitHandler()
 				ch.activeHandler = nil

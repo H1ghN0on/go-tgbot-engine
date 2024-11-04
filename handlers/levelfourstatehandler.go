@@ -11,7 +11,7 @@ func NewLevelFourHandler(gs GlobalStater) *LevelFourHandler {
 	h := &LevelFourHandler{}
 	h.gs = gs
 
-	h.commands = map[string][]func(params HandlerParams) HandlerResponse{
+	h.commands = map[string][]func(params HandlerParams) (HandlerResponse, error){
 		"/level_four_start": {h.ModifyHandler(h.LevelFourStartHandler, []int{StateBackable, RemovableByTrigger})},
 		"/level_four_one":   {h.ModifyHandler(h.LevelFourOneHandler, []int{StateBackable, RemovableByTrigger})},
 		"/level_four_two":   {h.ModifyHandler(h.LevelFourTwoHandler, []int{StateBackable, RemovableByTrigger})},
@@ -26,7 +26,7 @@ func (handler *LevelFourHandler) InitHandler() {
 
 }
 
-func (handler *LevelFourHandler) Handle(command string, params HandlerParams) ([]HandlerResponse, bool) {
+func (handler *LevelFourHandler) Handle(command string, params HandlerParams) ([]HandlerResponse, bool, error) {
 	var res []HandlerResponse
 
 	handleFuncs, ok := handler.Handler.commands[command]
@@ -35,18 +35,23 @@ func (handler *LevelFourHandler) Handle(command string, params HandlerParams) ([
 	}
 
 	for _, handleFunc := range handleFuncs {
-		response := handleFunc(params)
+		response, err := handleFunc(params)
+
+		if err != nil {
+			return []HandlerResponse{}, true, err
+		}
+
 		res = append(res, response)
 	}
 
-	return res, true
+	return res, true, nil
 }
 
 func (handler *LevelFourHandler) DeinitHandler() {
 
 }
 
-func (handler *Handler) LevelFourStartHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) LevelFourStartHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
@@ -60,10 +65,10 @@ func (handler *Handler) LevelFourStartHandler(params HandlerParams) HandlerRespo
 
 	res.messages = append(res.messages, response)
 
-	return HandlerResponse{messages: res.messages, nextState: "level-four-state"}
+	return HandlerResponse{messages: res.messages, nextState: "level-four-state"}, nil
 }
 
-func (handler *Handler) LevelFourOneHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) LevelFourOneHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
@@ -77,10 +82,10 @@ func (handler *Handler) LevelFourOneHandler(params HandlerParams) HandlerRespons
 
 	res.messages = append(res.messages, response)
 
-	return HandlerResponse{messages: res.messages}
+	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *Handler) LevelFourTwoHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) LevelFourTwoHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
@@ -94,10 +99,10 @@ func (handler *Handler) LevelFourTwoHandler(params HandlerParams) HandlerRespons
 
 	res.messages = append(res.messages, response)
 
-	return HandlerResponse{messages: res.messages}
+	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *Handler) LevelFourThreeHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) LevelFourThreeHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
@@ -111,15 +116,15 @@ func (handler *Handler) LevelFourThreeHandler(params HandlerParams) HandlerRespo
 
 	res.messages = append(res.messages, response)
 
-	return HandlerResponse{messages: res.messages}
+	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *Handler) LevelFourFourHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) LevelFourFourHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "FOUR!"})
 	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
 
-	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }

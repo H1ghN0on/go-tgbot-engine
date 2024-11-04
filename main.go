@@ -72,7 +72,7 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		"/set_age",
 		"/set_info_end",
 		"/back_state",
-		"/set_info_end",
+		"/back_command",
 		"*",
 	)
 

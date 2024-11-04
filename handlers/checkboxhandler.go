@@ -17,7 +17,7 @@ func NewCheckboxHandler(gs GlobalStater) *CheckboxHandler {
 	sh := &CheckboxHandler{}
 	sh.gs = gs
 
-	sh.commands = map[string][]func(params HandlerParams) HandlerResponse{
+	sh.commands = map[string][]func(params HandlerParams) (HandlerResponse, error){
 		"/checkboxes_start": {sh.SetCheckboxesStartHandler,
 			sh.ModifyHandler(sh.InitCheckboxesHandler, []int{CheckboxableTwo, KeyboardStarter})},
 		"/checkboxes_first":  {sh.ModifyHandler(sh.FirstCheckboxHandler, []int{CheckboxableTwo, KeyboardStarter})},
@@ -38,7 +38,7 @@ func (handler *CheckboxHandler) InitHandler() {
 	handler.fourthCheckbox = false
 }
 
-func (handler *CheckboxHandler) Handle(command string, params HandlerParams) ([]HandlerResponse, bool) {
+func (handler *CheckboxHandler) Handle(command string, params HandlerParams) ([]HandlerResponse, bool, error) {
 	var res []HandlerResponse
 
 	handleFuncs, ok := handler.Handler.commands[command]
@@ -46,42 +46,44 @@ func (handler *CheckboxHandler) Handle(command string, params HandlerParams) ([]
 		panic("wrong handler")
 	}
 
+	isFinished := command == "/checkboxes_accept"
+
 	for _, handleFunc := range handleFuncs {
-		response := handleFunc(params)
+		response, err := handleFunc(params)
+		if err != nil {
+			return []HandlerResponse{}, isFinished, err
+		}
 		res = append(res, response)
 	}
 
-	isFinished := command == "/checkboxes_accept"
-
-	return res, isFinished
+	return res, isFinished, nil
 }
 
 func (handler *CheckboxHandler) DeinitHandler() {
 
 }
 
-func (handler *CheckboxHandler) SetCheckboxesStartHandler(params HandlerParams) HandlerResponse {
+func (handler *CheckboxHandler) SetCheckboxesStartHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 	chatID := params.message.ChatID
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Let's try some checkboxes"}
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages, nextState: "checkbox-state"}
+	return HandlerResponse{messages: res.messages, nextState: "checkbox-state"}, nil
 }
 
-func (handler *CheckboxHandler) InitCheckboxesHandler(params HandlerParams) HandlerResponse {
+func (handler *CheckboxHandler) InitCheckboxesHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 	chatID := params.message.ChatID
 	retMessage := bottypes.Message{ChatID: chatID, Text: ""}
 	retMessage.ButtonRows = handler.gatherAllCheckboxes(chatID)
 
 	res.messages = append(res.messages, retMessage)
-
-	return HandlerResponse{messages: res.messages}
+	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *CheckboxHandler) FirstCheckboxHandler(params HandlerParams) HandlerResponse {
+func (handler *CheckboxHandler) FirstCheckboxHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 	chatID := params.message.ChatID
 
@@ -92,10 +94,10 @@ func (handler *CheckboxHandler) FirstCheckboxHandler(params HandlerParams) Handl
 
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages}
+	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *CheckboxHandler) SecondCheckboxHandler(params HandlerParams) HandlerResponse {
+func (handler *CheckboxHandler) SecondCheckboxHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 	chatID := params.message.ChatID
 
@@ -106,10 +108,10 @@ func (handler *CheckboxHandler) SecondCheckboxHandler(params HandlerParams) Hand
 
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages}
+	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *CheckboxHandler) ThirdCheckboxHandler(params HandlerParams) HandlerResponse {
+func (handler *CheckboxHandler) ThirdCheckboxHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 	chatID := params.message.ChatID
 
@@ -120,10 +122,10 @@ func (handler *CheckboxHandler) ThirdCheckboxHandler(params HandlerParams) Handl
 
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages}
+	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *CheckboxHandler) FourthCheckboxHandler(params HandlerParams) HandlerResponse {
+func (handler *CheckboxHandler) FourthCheckboxHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 	chatID := params.message.ChatID
 
@@ -134,10 +136,10 @@ func (handler *CheckboxHandler) FourthCheckboxHandler(params HandlerParams) Hand
 
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages}
+	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *CheckboxHandler) AcceptCheckboxHandler(params HandlerParams) HandlerResponse {
+func (handler *CheckboxHandler) AcceptCheckboxHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 	chatID := params.message.ChatID
 
@@ -161,7 +163,7 @@ func (handler *CheckboxHandler) AcceptCheckboxHandler(params HandlerParams) Hand
 
 	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
 
-	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }
 
 func (handler *CheckboxHandler) gatherAllCheckboxes(chatID int64) []bottypes.ButtonRows {

@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"fmt"
-
-	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 )
+
+var command_queue_max_size int = 30
 
 type BackHandler struct {
 	Handler
@@ -18,7 +18,7 @@ func NewBackHandler(gs GlobalStater, sm StateMachiner) *BackHandler {
 	h.gs = gs
 	h.sm = sm
 
-	h.commands = map[string][]func(params HandlerParams) HandlerResponse{
+	h.commands = map[string][]func(params HandlerParams) (HandlerResponse, error){
 		"/back_state":   {h.ModifyHandler(h.BackStateHandler, []int{RemoveTriggerer, KeyboardStopper})},
 		"/back_command": {h.BackCommandHandler},
 	}
@@ -29,6 +29,9 @@ func NewBackHandler(gs GlobalStater, sm StateMachiner) *BackHandler {
 func (handler *BackHandler) UpdateLastCommand(command string) {
 	if command != "/back_state" && command != "/back_command" {
 		if len(handler.commandQueue) == 0 || command != handler.commandQueue[len(handler.commandQueue)-1] {
+			if len(handler.commandQueue) > command_queue_max_size {
+				handler.commandQueue = handler.commandQueue[1:]
+			}
 			handler.commandQueue = append(handler.commandQueue, command)
 		}
 	}
@@ -39,11 +42,15 @@ func (handler *BackHandler) UpdateLastCommand(command string) {
 	fmt.Println("------------------")
 }
 
+func (handler *BackHandler) ClearCommandQueue() {
+	handler.commandQueue = nil
+}
+
 func (handler *BackHandler) InitHandler() {
 
 }
 
-func (handler *BackHandler) Handle(command string, params HandlerParams) ([]HandlerResponse, bool) {
+func (handler *BackHandler) Handle(command string, params HandlerParams) ([]HandlerResponse, bool, error) {
 	var res []HandlerResponse
 
 	handleFuncs, ok := handler.Handler.commands[command]
@@ -52,36 +59,38 @@ func (handler *BackHandler) Handle(command string, params HandlerParams) ([]Hand
 	}
 
 	for _, handleFunc := range handleFuncs {
-		response := handleFunc(params)
+		response, err := handleFunc(params)
+		if err != nil {
+			return []HandlerResponse{}, true, err
+		}
 		res = append(res, response)
 	}
 
-	return res, true
+	return res, true, nil
 }
 
 func (handler *BackHandler) DeinitHandler() {
 
 }
 
-func (handler *BackHandler) BackStateHandler(params HandlerParams) HandlerResponse {
+func (handler *BackHandler) BackStateHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	prevState := handler.sm.GetPreviousState()
 	newActiveCommand := prevState.GetStartCommand()
 
-	return HandlerResponse{messages: res.messages, nextState: prevState.GetName(), postCommandsHandle: []string{newActiveCommand}}
+	return HandlerResponse{messages: res.messages, nextState: prevState.GetName(), postCommandsHandle: []string{newActiveCommand}}, nil
 }
 
-func (handler *BackHandler) BackCommandHandler(params HandlerParams) HandlerResponse {
+func (handler *BackHandler) BackCommandHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	if len(handler.commandQueue) < 1 {
-		return HandlerResponse{messages: []bottypes.Message{{ChatID: params.message.ChatID, Text: "pizda"}}}
+		return HandlerResponse{}, HandlerResponseError{message: "cannot return to previous command"}
 	}
 
 	currentCommand := handler.commandQueue[len(handler.commandQueue)-2]
 	handler.commandQueue = handler.commandQueue[:len(handler.commandQueue)-1]
-	// logger.NewLogger(0).Info("prevPrevCommand: " + handler.prevPrevCommand + " prevCommand: " + handler.prevCommand + " current command: " + handler.currentCommand)
 
-	return HandlerResponse{messages: res.messages, postCommandsHandle: []string{currentCommand}}
+	return HandlerResponse{messages: res.messages, postCommandsHandle: []string{currentCommand}}, nil
 }

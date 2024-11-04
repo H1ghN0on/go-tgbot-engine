@@ -20,7 +20,15 @@ const (
 
 type Handler struct {
 	gs       GlobalStater
-	commands map[string][]func(params HandlerParams) HandlerResponse
+	commands map[string][]func(params HandlerParams) (HandlerResponse, error)
+}
+
+type HandlerResponseError struct {
+	message string
+}
+
+func (res HandlerResponseError) Error() string {
+	return res.message
 }
 
 func (handler Handler) GetCommands() []string {
@@ -70,15 +78,19 @@ func NewHandler(gs GlobalStater) *Handler {
 	}
 }
 
-func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResponse, modifiers []int) func(HandlerParams) HandlerResponse {
-	return func(params HandlerParams) HandlerResponse {
+func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) (HandlerResponse, error), modifiers []int) func(HandlerParams) (HandlerResponse, error) {
+	return func(params HandlerParams) (HandlerResponse, error) {
 		if slices.Contains(modifiers, Nothingness) {
 			return HandlerResponse{
 				triggers: []bottypes.Trigger{bottypes.NothingTrigger},
-			}
+			}, nil
 		}
 
-		response := handlerFoo(params)
+		response, err := handlerFoo(params)
+		if err != nil {
+			return HandlerResponse{}, err
+		}
+
 		for idx, message := range response.messages {
 
 			if slices.Contains(modifiers, StateBackable) {
@@ -146,10 +158,10 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResp
 			response.triggers = append(response.triggers, bottypes.RemoveTrigger)
 		}
 
-		return response
+		return response, nil
 	}
 }
 
-func (handler *Handler) EmptyHandler(params HandlerParams) HandlerResponse {
-	return HandlerResponse{}
+func (handler *Handler) EmptyHandler(params HandlerParams) (HandlerResponse, error) {
+	return HandlerResponse{}, nil
 }

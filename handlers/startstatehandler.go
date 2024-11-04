@@ -11,7 +11,7 @@ func NewStartHandler(gs GlobalStater) *StartHandler {
 	h := &StartHandler{}
 	h.gs = gs
 
-	h.commands = map[string][]func(params HandlerParams) HandlerResponse{
+	h.commands = map[string][]func(params HandlerParams) (HandlerResponse, error){
 		"/show_commands": {h.ShowCommandsHandler},
 		"/level_one":     {h.LevelOneHandler},
 		"/level_two":     {h.LevelTwoHandler},
@@ -26,7 +26,7 @@ func (handler *StartHandler) InitHandler() {
 
 }
 
-func (handler *StartHandler) Handle(command string, params HandlerParams) ([]HandlerResponse, bool) {
+func (handler *StartHandler) Handle(command string, params HandlerParams) ([]HandlerResponse, bool, error) {
 	var res []HandlerResponse
 
 	handleFuncs, ok := handler.Handler.commands[command]
@@ -35,45 +35,48 @@ func (handler *StartHandler) Handle(command string, params HandlerParams) ([]Han
 	}
 
 	for _, handleFunc := range handleFuncs {
-		response := handleFunc(params)
+		response, err := handleFunc(params)
+		if err != nil {
+			return []HandlerResponse{}, true, err
+		}
 		res = append(res, response)
 	}
 
-	return res, true
+	return res, true, nil
 }
 
 func (handler *StartHandler) DeinitHandler() {
 
 }
 
-func (handler *Handler) LevelOneHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) LevelOneHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "YOUR FINAL SIGHT!"})
 	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
-	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }
 
-func (handler *Handler) LevelTwoHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) LevelTwoHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "SEE AS I SEE!"})
 	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
-	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }
 
-func (handler *Handler) LevelThreeHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) LevelThreeHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "FEEL WITH ME!"})
 	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
-	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }
 
-func (handler *Handler) ShowCommandsHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) ShowCommandsHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 	chatID := params.message.ChatID
 
@@ -130,10 +133,10 @@ func (handler *Handler) ShowCommandsHandler(params HandlerParams) HandlerRespons
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3, buttonRow4, buttonRow5, buttonRow6, buttonRow7)
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages}
+	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *Handler) BigMessagesHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) BigMessagesHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
@@ -141,5 +144,5 @@ func (handler *Handler) BigMessagesHandler(params HandlerParams) HandlerResponse
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "Давно выяснено, что при оценке дизайна и композиции читаемый текст мешает сосредоточиться. Lorem Ipsum используют потому, что тот обеспечивает более или менее стандартное заполнение шаблона, а также реальное распределение букв и пробелов в абзацах, которое не получается при простой дубликации 'Здесь ваш текст.. Здесь ваш текст.. Здесь ваш текст..' Многие программы электронной вёрстки и редакторы HTML используют Lorem Ipsum в качестве текста по умолчанию, так что поиск по ключевым словам 'lorem ipsum' сразу показывает, как много веб-страниц всё ещё дожидаются своего настоящего рождения. За прошедшие годы текст Lorem Ipsum получил много версий. Некоторые версии появились по ошибке, некоторые - намеренно (например, юмористические варианты)."})
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "Давно выяснено, что при оценке дизайна и композиции читаемый текст мешает сосредоточиться. Lorem Ipsum используют потому, что тот обеспечивает более или менее стандартное заполнение шаблона, а также реальное распределение букв и пробелов в абзацах, которое не получается при простой дубликации 'Здесь ваш текст.. Здесь ваш текст.. Здесь ваш текст..' Многие программы электронной вёрстки и редакторы HTML используют Lorem Ipsum в качестве текста по умолчанию, так что поиск по ключевым словам 'lorem ipsum' сразу показывает, как много веб-страниц всё ещё дожидаются своего настоящего рождения. За прошедшие годы текст Lorem Ipsum получил много версий. Некоторые версии появились по ошибке, некоторые - намеренно (например, юмористические варианты)."})
 	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
-	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }

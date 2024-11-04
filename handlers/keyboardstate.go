@@ -11,7 +11,7 @@ func NewKeyboardhandler(gs GlobalStater) *KeyboardHandler {
 	h := &KeyboardHandler{}
 	h.gs = gs
 
-	h.commands = map[string][]func(params HandlerParams) HandlerResponse{
+	h.commands = map[string][]func(params HandlerParams) (HandlerResponse, error){
 		"/keyboard_start":  {h.ModifyHandler(h.KeyboardStartHandler, []int{RemovableByTrigger})},
 		"/keyboard_one":    {h.ModifyHandler(h.KeyboardOneHandler, []int{StateBackable, KeyboardStarter, RemovableByTrigger})},
 		"/keyboard_two":    {h.ModifyHandler(h.KeyboardTwoHandler, []int{CommandBackable, KeyboardStarter, RemovableByTrigger})},
@@ -26,7 +26,7 @@ func (handler *KeyboardHandler) InitHandler() {
 
 }
 
-func (handler *KeyboardHandler) Handle(command string, params HandlerParams) ([]HandlerResponse, bool) {
+func (handler *KeyboardHandler) Handle(command string, params HandlerParams) ([]HandlerResponse, bool, error) {
 	var res []HandlerResponse
 
 	handleFuncs, ok := handler.Handler.commands[command]
@@ -35,26 +35,29 @@ func (handler *KeyboardHandler) Handle(command string, params HandlerParams) ([]
 	}
 
 	for _, handleFunc := range handleFuncs {
-		response := handleFunc(params)
+		response, err := handleFunc(params)
+		if err != nil {
+			return []HandlerResponse{}, true, err
+		}
 		res = append(res, response)
 	}
 
-	return res, true
+	return res, true, nil
 }
 
 func (handler *KeyboardHandler) DeinitHandler() {
 
 }
 
-func (handler *Handler) KeyboardStartHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) KeyboardStartHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	res.postCommandsHandle = append(res.postCommandsHandle, "/keyboard_one")
 
-	return HandlerResponse{nextState: "keyboard-state", postCommandsHandle: res.postCommandsHandle}
+	return HandlerResponse{nextState: "keyboard-state", postCommandsHandle: res.postCommandsHandle}, nil
 }
 
-func (handler *Handler) KeyboardOneHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) KeyboardOneHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 	chatID := params.message.ChatID
 
@@ -77,10 +80,10 @@ func (handler *Handler) KeyboardOneHandler(params HandlerParams) HandlerResponse
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages}
+	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *Handler) KeyboardTwoHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) KeyboardTwoHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 	chatID := params.message.ChatID
 
@@ -103,10 +106,10 @@ func (handler *Handler) KeyboardTwoHandler(params HandlerParams) HandlerResponse
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages}
+	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *Handler) KeyboardThreeHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) KeyboardThreeHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 	chatID := params.message.ChatID
 
@@ -129,10 +132,10 @@ func (handler *Handler) KeyboardThreeHandler(params HandlerParams) HandlerRespon
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages}
+	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *Handler) KeyboardFinishHandler(params HandlerParams) HandlerResponse {
+func (handler *Handler) KeyboardFinishHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 	chatID := params.message.ChatID
 
@@ -140,5 +143,5 @@ func (handler *Handler) KeyboardFinishHandler(params HandlerParams) HandlerRespo
 	res.messages = append(res.messages, retMessage)
 
 	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
-	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }
