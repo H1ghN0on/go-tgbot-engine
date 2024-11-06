@@ -87,6 +87,7 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		"/checkboxes_third",
 		"/checkboxes_fourth",
 		"/checkboxes_accept",
+		"/back_state",
 		"/nothingness",
 	)
 

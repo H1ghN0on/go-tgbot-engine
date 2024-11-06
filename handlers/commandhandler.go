@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
@@ -11,8 +10,8 @@ import (
 
 type Stater interface {
 	GetName() string
-	GetStartCommand() string
-	GetAvailableCommands() []string
+	GetStartCommand() bottypes.Command
+	GetAvailableCommands() []bottypes.Command
 	GetAvailableStates() []Stater
 	CanRestart() bool
 }
@@ -47,15 +46,13 @@ type GlobalStater interface {
 }
 
 type Handlerable interface {
-	GetCommands() []string
-	InitHandler()
-	Handle(command string, params HandlerParams) ([]HandlerResponse, bool, error)
-	DeinitHandler()
+	GetCommands() []bottypes.Command
+	Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error)
 }
 
 type BackHandlerable interface {
 	Handlerable
-	UpdateLastCommand(command string)
+	UpdateLastCommand(command bottypes.Command)
 	ClearCommandQueue()
 }
 
@@ -94,11 +91,11 @@ func (chr CommandHandlerResponse) GetResponses() []bot.HandlerResponser {
 }
 
 type CommandHandler struct {
-	sm            StateMachiner
-	gs            GlobalStater
-	handlers      []Handlerable
-	activeHandler Handlerable
-	backHandler   BackHandlerable
+	sm           StateMachiner
+	gs           GlobalStater
+	handlers     []Handlerable
+	backHandler  BackHandlerable
+	nextCommands []bottypes.Command
 }
 
 func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.Message, shouldUpdateQueue bool) bot.CommandHandlerRequester {
@@ -129,9 +126,38 @@ func (ch *CommandHandler) updateState(res CommandHandlerResponse) error {
 	return nil
 }
 
-func (ch *CommandHandler) checkCommandInState(command string) bool {
+func (ch *CommandHandler) updateNextCommands(responses []HandlerResponse) {
+	ch.nextCommands = nil
+	for _, response := range responses {
+		ch.nextCommands = append(ch.nextCommands, response.nextCommands...)
+	}
+}
+
+func (ch *CommandHandler) checkCommandInState(command bottypes.Command) bool {
 	return slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), command) ||
-		(slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), "*") && !strings.HasPrefix(command, "/"))
+		(slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), "*") && !command.IsCommand())
+}
+
+func (ch *CommandHandler) checkCommandInNextCommands(command bottypes.Command) bool {
+	return len(ch.nextCommands) == 0 || slices.Contains(ch.nextCommands, command) ||
+		(slices.Contains(ch.nextCommands, "*") && !command.IsCommand())
+}
+
+func (ch *CommandHandler) checkCommandInHandler(command bottypes.Command, handler Handlerable) bool {
+	commandsToCheck := handler.GetCommands()
+	return slices.Contains(commandsToCheck, command) ||
+		(slices.Contains(commandsToCheck, "*") && !command.IsCommand())
+}
+
+func (ch *CommandHandler) hasCommandInHandler(commands []bottypes.Command, handler Handlerable) bool {
+
+	commandsToCheck := handler.GetCommands()
+	for _, command := range commands {
+		if slices.Contains(commandsToCheck, command) || (slices.Contains(commandsToCheck, "*") && !command.IsCommand()) {
+			return true
+		}
+	}
+	return false
 }
 
 func (ch *CommandHandler) handlePostCommands(message bottypes.Message, responses []HandlerResponse) ([]bot.HandlerResponser, error) {
@@ -152,44 +178,23 @@ func (ch *CommandHandler) handlePostCommands(message bottypes.Message, responses
 	return res, nil
 }
 
-func (ch *CommandHandler) handleCommand(command string, receivedMessage bottypes.Message) (bot.CommandHandlerResponser, error) {
+func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessage bottypes.Message) (bot.CommandHandlerResponser, error) {
 	var res CommandHandlerResponse
 
 	for _, handler := range ch.handlers {
-		if slices.Contains(handler.GetCommands(), command) || ch.activeHandler != nil {
+		commandToCheck := command
+		if !command.IsCommand() && ch.hasCommandInHandler(ch.nextCommands, handler) {
+			commandToCheck = "*"
+		}
 
-			if ch.activeHandler != nil {
-				if slices.Contains(ch.backHandler.GetCommands(), command) {
-					responses, isFinished, err := ch.backHandler.Handle(command, HandlerParams{message: receivedMessage})
+		if ch.checkCommandInHandler(commandToCheck, handler) {
 
-					if err != nil {
-						return CommandHandlerResponse{}, CommandHandlerError{message: err.Error()}
-					}
-
-					if isFinished {
-						ch.activeHandler.DeinitHandler()
-						ch.activeHandler = nil
-					}
-					ch.backHandler.UpdateLastCommand(command)
-					res.responses = responses
-					break
-				}
-
-			} else {
-				ch.activeHandler = handler
-				ch.activeHandler.InitHandler()
-			}
-
-			responses, isFinished, err := ch.activeHandler.Handle(command, HandlerParams{message: receivedMessage})
+			responses, err := handler.Handle(command, HandlerParams{message: receivedMessage})
 
 			if err != nil {
 				return CommandHandlerResponse{}, CommandHandlerError{message: err.Error()}
 			}
 
-			if isFinished {
-				ch.activeHandler.DeinitHandler()
-				ch.activeHandler = nil
-			}
 			ch.backHandler.UpdateLastCommand(command)
 			res.responses = responses
 			break
@@ -204,6 +209,7 @@ func (ch *CommandHandler) handleCommand(command string, receivedMessage bottypes
 	if err != nil {
 		return CommandHandlerResponse{}, CommandHandlerError{message: "command handler error: " + err.Error()}
 	}
+	ch.updateNextCommands(res.responses)
 
 	postCommandResponses, err := ch.handlePostCommands(receivedMessage, res.responses)
 	if err != nil {
@@ -214,16 +220,22 @@ func (ch *CommandHandler) handleCommand(command string, receivedMessage bottypes
 		res.responses = append(res.responses, postCommandResponse.(HandlerResponse))
 	}
 
+	ch.updateNextCommands(res.responses)
+
 	return res, nil
 }
 
 func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHandlerResponser, error) {
 
 	receivedMessage := req.GetMessage()
-	command := receivedMessage.Text
+	command := bottypes.Command(receivedMessage.Text)
+
+	if !ch.checkCommandInNextCommands(command) {
+		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available (not in next commands)"}
+	}
 
 	if !ch.checkCommandInState(command) {
-		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available "}
+		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available (not in state)"}
 	}
 
 	chRes, err := ch.handleCommand(command, receivedMessage)

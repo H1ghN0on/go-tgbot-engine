@@ -11,7 +11,7 @@ func NewStartHandler(gs GlobalStater) *StartHandler {
 	h := &StartHandler{}
 	h.gs = gs
 
-	h.commands = map[string][]func(params HandlerParams) (HandlerResponse, error){
+	h.commands = map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error){
 		"/show_commands": {h.ShowCommandsHandler},
 		"/level_one":     {h.LevelOneHandler},
 		"/level_two":     {h.LevelTwoHandler},
@@ -22,11 +22,7 @@ func NewStartHandler(gs GlobalStater) *StartHandler {
 	return h
 }
 
-func (handler *StartHandler) InitHandler() {
-
-}
-
-func (handler *StartHandler) Handle(command string, params HandlerParams) ([]HandlerResponse, bool, error) {
+func (handler *StartHandler) Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
 	handleFuncs, ok := handler.Handler.commands[command]
@@ -37,19 +33,15 @@ func (handler *StartHandler) Handle(command string, params HandlerParams) ([]Han
 	for _, handleFunc := range handleFuncs {
 		response, err := handleFunc(params)
 		if err != nil {
-			return []HandlerResponse{}, true, err
+			return []HandlerResponse{}, err
 		}
 		res = append(res, response)
 	}
 
-	return res, true, nil
+	return res, nil
 }
 
-func (handler *StartHandler) DeinitHandler() {
-
-}
-
-func (handler *Handler) LevelOneHandler(params HandlerParams) (HandlerResponse, error) {
+func (handler *StartHandler) LevelOneHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
@@ -58,7 +50,7 @@ func (handler *Handler) LevelOneHandler(params HandlerParams) (HandlerResponse, 
 	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }
 
-func (handler *Handler) LevelTwoHandler(params HandlerParams) (HandlerResponse, error) {
+func (handler *StartHandler) LevelTwoHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
@@ -67,7 +59,7 @@ func (handler *Handler) LevelTwoHandler(params HandlerParams) (HandlerResponse, 
 	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }
 
-func (handler *Handler) LevelThreeHandler(params HandlerParams) (HandlerResponse, error) {
+func (handler *StartHandler) LevelThreeHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID
@@ -76,7 +68,7 @@ func (handler *Handler) LevelThreeHandler(params HandlerParams) (HandlerResponse
 	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }
 
-func (handler *Handler) ShowCommandsHandler(params HandlerParams) (HandlerResponse, error) {
+func (handler *StartHandler) ShowCommandsHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 	chatID := params.message.ChatID
 
@@ -89,44 +81,44 @@ func (handler *Handler) ShowCommandsHandler(params HandlerParams) (HandlerRespon
 
 	buttonRow1 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Level 1", Command: bottypes.Command{Text: "/level_one"}},
-			{ChatID: chatID, Text: "Level 2", Command: bottypes.Command{Text: "/level_two"}},
+			{ChatID: chatID, Text: "Level 1", Command: "/level_one"},
+			{ChatID: chatID, Text: "Level 2", Command: "/level_two"},
 		},
 	}
 
 	buttonRow2 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Level 3", Command: bottypes.Command{Text: "/level_three"}},
-			{ChatID: chatID, Text: "Create error", Command: bottypes.Command{Text: "/create_error"}},
+			{ChatID: chatID, Text: "Level 3", Command: "/level_three"},
+			{ChatID: chatID, Text: "Create error", Command: "/create_error"},
 		},
 	}
 
 	buttonRow3 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Curtain Call", Command: bottypes.Command{Text: "/level_four_start"}},
+			{ChatID: chatID, Text: "Curtain Call", Command: "/level_four_start"},
 		},
 	}
 
 	buttonRow4 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Big messages", Command: bottypes.Command{Text: "/big_messages"}},
+			{ChatID: chatID, Text: "Big messages", Command: "/big_messages"},
 		},
 	}
 
 	buttonRow5 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Keyboard", Command: bottypes.Command{Text: "/keyboard_start"}},
+			{ChatID: chatID, Text: "Keyboard", Command: "/keyboard_start"},
 		},
 	}
 
 	buttonRow6 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Set Info", Command: bottypes.Command{Text: "/set_info_start"}},
+			{ChatID: chatID, Text: "Set Info", Command: "/set_info_start"},
 		},
 	}
 	buttonRow7 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Checkboxes", Command: bottypes.Command{Text: "/checkboxes_start"}},
+			{ChatID: chatID, Text: "Checkboxes", Command: "/checkboxes_start"},
 		},
 	}
 
@@ -136,7 +128,7 @@ func (handler *Handler) ShowCommandsHandler(params HandlerParams) (HandlerRespon
 	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *Handler) BigMessagesHandler(params HandlerParams) (HandlerResponse, error) {
+func (handler *StartHandler) BigMessagesHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
 	chatID := params.message.ChatID

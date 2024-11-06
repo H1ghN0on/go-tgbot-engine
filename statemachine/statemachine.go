@@ -3,6 +3,7 @@ package statemachine
 import (
 	"slices"
 
+	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
 )
 
@@ -16,8 +17,8 @@ type StateMachine struct {
 
 type State struct {
 	name              string
-	startCommand      string
-	availableCommands []string
+	startCommand      bottypes.Command
+	availableCommands []bottypes.Command
 	availableStates   []State
 	canRestart        bool
 }
@@ -30,7 +31,7 @@ func (err StateMachineError) Error() string {
 	return err.message
 }
 
-func (state State) GetStartCommand() string {
+func (state State) GetStartCommand() bottypes.Command {
 	return state.startCommand
 }
 
@@ -38,7 +39,7 @@ func (state State) GetName() string {
 	return state.name
 }
 
-func (state State) GetAvailableCommands() []string {
+func (state State) GetAvailableCommands() []bottypes.Command {
 	return state.availableCommands
 }
 
@@ -61,7 +62,7 @@ func (state State) CanRestart() bool {
 	return state.canRestart
 }
 
-func NewState(name string, startCommand string, availableCommands ...string) *State {
+func NewState(name string, startCommand bottypes.Command, availableCommands ...bottypes.Command) *State {
 	return &State{
 		name:              name,
 		startCommand:      startCommand,
