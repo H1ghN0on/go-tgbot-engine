@@ -52,7 +52,11 @@ func (state State) GetAvailableStates() []handlers.Stater {
 
 func (state *State) SetAvailableStates(newStates ...handlers.Stater) {
 	for _, newState := range newStates {
-		state.availableStates = append(state.availableStates, newState.(State))
+		if newState, ok := newState.(State); ok {
+			state.availableStates = append(state.availableStates, newState)
+		}	else{
+			panic("Statemachine|SetAvailableStates|\nerror: Object is not type State")
+		}
 	}
 }
 
@@ -76,14 +80,6 @@ func (sm *StateMachine) AddStates(states ...handlers.Stater) {
 	}
 }
 
-func (sm *StateMachine) SetStateByName(stateName string) error {
-	err := sm.SetState(State{name: stateName})
-	if err != nil {
-		return StateMachineError{message: err.Error()}
-	}
-	return nil
-}
-
 func (sm *StateMachine) SetState(state handlers.Stater) error {
 	if state.GetName() == "" {
 		return StateMachineError{message: "State has empty name"}
@@ -104,6 +100,14 @@ func (sm *StateMachine) SetState(state handlers.Stater) error {
 		return nil
 	}
 	return StateMachineError{message: "Can not move to this state"}
+}
+
+func (sm *StateMachine) SetStateByName(stateName string) error {
+	err := sm.SetState(State{name: stateName})
+	if err != nil {
+		return StateMachineError{message: err.Error()}
+	}
+	return nil
 }
 
 func (sm *StateMachine) GetPreviousState() handlers.Stater {
