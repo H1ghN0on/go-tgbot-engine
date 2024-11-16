@@ -65,16 +65,11 @@ func (err CommandHandlerError) Error() string {
 }
 
 type CommandHandlerRequest struct {
-	receivedMessage   bottypes.Message
-	shouldUpdateQueue bool
+	receivedMessage bottypes.Message
 }
 
 func (req CommandHandlerRequest) GetMessage() bottypes.Message {
 	return req.receivedMessage
-}
-
-func (req CommandHandlerRequest) ShouldUpdateQueue() bool {
-	return req.shouldUpdateQueue
 }
 
 type CommandHandlerResponse struct {
@@ -98,10 +93,9 @@ type CommandHandler struct {
 	nextCommands []bottypes.Command
 }
 
-func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.Message, shouldUpdateQueue bool) bot.CommandHandlerRequester {
+func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.Message) bot.CommandHandlerRequester {
 	return &CommandHandlerRequest{
-		receivedMessage:   msg,
-		shouldUpdateQueue: shouldUpdateQueue,
+		receivedMessage: msg,
 	}
 }
 
