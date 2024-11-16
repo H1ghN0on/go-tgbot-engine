@@ -121,8 +121,9 @@ func main() {
 		levelInt = 0
 	}
 
-	mainLogger := logger.NewLogger(levelInt)
-	mainLogger.Info("This is an info message")
+	logger.InitGlobalLoggerSettings(logger.LoggerSettings{
+		Level: logger.LogLevel(levelInt),
+	})
 
 	tgBotKey, exists := os.LookupEnv("TELEGRAM_BOT_API")
 	if !exists {

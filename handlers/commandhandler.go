@@ -6,6 +6,7 @@ import (
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	"github.com/H1ghN0on/go-tgbot-engine/logger"
 )
 
 type Stater interface {
@@ -93,6 +94,18 @@ type CommandHandler struct {
 	nextCommands []bottypes.Command
 }
 
+func convertCommandsToString(commands []bottypes.Command) string {
+	var ret string
+	for _, command := range commands {
+		ret += command.String() + " "
+	}
+	if len(ret) != 0 {
+		ret = ret[:len(ret)-1]
+	}
+
+	return ret
+}
+
 func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.Message) bot.CommandHandlerRequester {
 	return &CommandHandlerRequest{
 		receivedMessage: msg,
@@ -175,6 +188,8 @@ func (ch *CommandHandler) handlePostCommands(message bottypes.Message, responses
 func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessage bottypes.Message) (bot.CommandHandlerResponser, error) {
 	var res CommandHandlerResponse
 
+	logger.CommandHandler().Info("trying to handle", command.String())
+
 	for _, handler := range ch.handlers {
 		commandToCheck := command
 		if !command.IsCommand() && ch.hasCommandInHandler(ch.nextCommands, handler) {
@@ -186,6 +201,7 @@ func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessag
 			responses, err := handler.Handle(command, HandlerParams{message: receivedMessage})
 
 			if err != nil {
+				logger.CommandHandler().Critical("error while handling command", command.String(), err.Error())
 				return CommandHandlerResponse{}, CommandHandlerError{message: err.Error()}
 			}
 
@@ -196,6 +212,7 @@ func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessag
 	}
 
 	if len(res.responses) == 0 {
+		logger.CommandHandler().Warning("command", command.String(), "is unknown")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown"}
 	}
 
@@ -216,6 +233,8 @@ func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessag
 
 	ch.updateNextCommands(res.responses)
 
+	logger.CommandHandler().Info("command", command.String(), "handled successfully")
+
 	return res, nil
 }
 
@@ -225,10 +244,12 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 	command := bottypes.Command(receivedMessage.Text)
 
 	if !ch.checkCommandInNextCommands(command) {
+		logger.CommandHandler().Critical(command.String(), "is not in next commands (", convertCommandsToString(ch.nextCommands), ")")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available (not in next commands)"}
 	}
 
 	if !ch.checkCommandInState(command) {
+		logger.CommandHandler().Critical(command.String(), "is not in state commands (", convertCommandsToString(ch.sm.GetActiveState().GetAvailableCommands()), ")")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available (not in state)"}
 	}
 

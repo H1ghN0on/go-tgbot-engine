@@ -3,8 +3,10 @@ package bot
 import (
 	"fmt"
 	"slices"
+	"strconv"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	"github.com/H1ghN0on/go-tgbot-engine/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -271,14 +273,19 @@ func (client *Client) ListenMessages() {
 	u.Timeout = 60
 	updates := client.api.GetUpdatesChan(u)
 
+	logger.Bot().Info("listening messsages")
+
 	for update := range updates {
 		var receivedMessage bottypes.Message
 
 		receivedMessage, chatID, err := client.parseMessage(update)
+
 		if err != nil {
 			client.sendErrorMessage(chatID, fmt.Errorf("parse error: %w", err))
 			continue
 		}
+
+		logger.Bot().Info("new message received from", strconv.Itoa(int(receivedMessage.ChatID)))
 
 		req := client.cmdhandler.NewCommandHandlerRequest(receivedMessage)
 		handlerResult, err := client.cmdhandler.Handle(req)
@@ -291,10 +298,12 @@ func (client *Client) ListenMessages() {
 			for _, message := range response.GetMessages() {
 
 				if message.ChatID == 0 {
+					logger.Bot().Critical("receiver of sending message is unknown")
 					panic("Chat ID = 0")
 				}
 
 				if len(message.ButtonRows) == 0 && message.Text == "" {
+					logger.Bot().Warning("trying to send empty message, skipped")
 					continue
 				}
 
@@ -316,10 +325,12 @@ func (client *Client) ListenMessages() {
 				}
 
 				if response.ContainsTrigger(bottypes.AddToNextRemoveTrigger) {
+					logger.Bot().Info("message", strconv.Itoa(client.lastMessage.ID), "marked to remove")
 					client.addToRemoveMessagesQueue(client.lastMessage)
 				}
 			}
 			if response.ContainsTrigger(bottypes.RemoveTrigger) {
+				logger.Bot().Info("removing all marked messages")
 				err := client.removeMessagesByTrigger()
 				if err != nil {
 					panic(err)

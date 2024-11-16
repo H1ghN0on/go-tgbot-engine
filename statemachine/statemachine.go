@@ -5,6 +5,7 @@ import (
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
+	"github.com/H1ghN0on/go-tgbot-engine/logger"
 )
 
 type Command string
@@ -93,17 +94,22 @@ func (sm *StateMachine) SetStateByName(stateName string) error {
 
 func (sm *StateMachine) SetState(state handlers.Stater) error {
 	if state.GetName() == "" {
+		logger.StateMachine().Critical("state has empty name")
 		return StateMachineError{message: "State has empty name"}
 	}
 
 	idx := slices.IndexFunc(sm.states, sm.CompareStates(state.(State)))
 	if idx == -1 {
+		logger.StateMachine().Critical("state", sm.activeState.name)
 		return StateMachineError{message: "This state is not unavailable"}
 	}
 
 	if sm.activeState.GetName() == "" || slices.ContainsFunc(sm.activeState.availableStates, sm.CompareStates(sm.states[idx])) {
 		sm.previousState = sm.activeState
 		sm.activeState = sm.states[idx]
+
+		logger.StateMachine().Info("state updated:", sm.activeState.name)
+
 		return nil
 	}
 	return StateMachineError{message: "Can not move to this state"}
