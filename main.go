@@ -56,6 +56,7 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		"/keyboard_one",
 		"/keyboard_two",
 		"/keyboard_three",
+		"/keyboard_finish",
 		"/back_state",
 		"/back_command",
 	)
@@ -71,6 +72,7 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		"/set_age",
 		"/set_info_end",
 		"/back_state",
+		"/back_command",
 		"*",
 	)
 
@@ -85,10 +87,11 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		"/checkboxes_third",
 		"/checkboxes_fourth",
 		"/checkboxes_accept",
+		"/back_state",
 		"/nothingness",
 	)
 
-	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState)
+	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState, *startState)
 	levelFourState.SetAvailableStates(*startState)
 	keyboardState.SetAvailableStates(*startState)
 	infoState.SetAvailableStates((*startState))
@@ -118,8 +121,9 @@ func main() {
 		levelInt = 0
 	}
 
-	mainLogger := logger.NewLogger(levelInt)
-	mainLogger.Info("This is an info message")
+	logger.InitGlobalLoggerSettings(logger.LoggerSettings{
+		Level: logger.LogLevel(levelInt),
+	})
 
 	tgBotKey, exists := os.LookupEnv("TELEGRAM_BOT_API")
 	if !exists {

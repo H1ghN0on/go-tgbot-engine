@@ -13,47 +13,37 @@ const (
 	Critical
 )
 
-type Logger struct {
-	level          LogLevel
-	category       string
-	StateMachine   *Logger
-	CommandHandler *Logger
+type LoggerSettings struct {
+	Level LogLevel
 }
 
-func NewLogger(levelInt int) *Logger {
-	var level LogLevel
+type Logger struct {
+	category string
+}
 
-	switch levelInt {
+var globalLoggerSettings LoggerSettings
+
+func InitGlobalLoggerSettings(settings LoggerSettings) {
+
+	switch settings.Level {
 	case 0:
-		level = Info
+		globalLoggerSettings.Level = Info
 	case 1:
-		level = Warning
+		globalLoggerSettings.Level = Warning
 	case 2:
-		level = Critical
+		globalLoggerSettings.Level = Critical
 	default:
-		level = Info
+		globalLoggerSettings.Level = Info
 		fmt.Println("Invalid value for LogLevel. Choosed default LogLevel `INFO`")
 	}
-
-	rootLogger := &Logger{
-		level:    level,
-		category: "Root",
-	}
-
-	rootLogger.StateMachine = &Logger{
-		level:    level,
-		category: "StateMachine",
-	}
-	rootLogger.CommandHandler = &Logger{
-		level:    level,
-		category: "CommandHandler",
-	}
-
-	return rootLogger
 }
 
-func (l *Logger) logMessage(level LogLevel, message string) {
-	if level < l.level {
+func (l *Logger) logMessage(level LogLevel, messages ...string) {
+	if level < globalLoggerSettings.Level {
+		return
+	}
+
+	if len(messages) == 0 {
 		return
 	}
 
@@ -62,27 +52,34 @@ func (l *Logger) logMessage(level LogLevel, message string) {
 	var levelStr, color string
 	switch level {
 	case Info:
-		levelStr = "[INFO]"
+		levelStr = "INFO"
 		color = "\033[34m" // Blue color
 	case Warning:
-		levelStr = "[WARNING]"
+		levelStr = "WARNING"
 		color = "\033[33m" // Yellow color
 	case Critical:
-		levelStr = "[CRITICAL]"
+		levelStr = "CRITICAL"
 		color = "\033[31m" // Red color
 	default:
 		fmt.Println("Invalid value for LogLevel. Choosed default LogLevel `INFO`")
-		levelStr = "[INFO]"
+		levelStr = "INFO"
 		color = "\033[34m" // Blue color
 	}
 
 	resetColor := "\033[0m" // Reset color
 
-	logLine := fmt.Sprintf("%s %s%s [%s] %s%s", timestamp, color, levelStr, l.category, message, resetColor)
-	fmt.Println(logLine)
+	var fullMessage string
+	for _, message := range messages {
+		fullMessage += message + " "
+	}
+	fullMessage = fullMessage[:len(fullMessage)-1]
 
+	logLine := fmt.Sprintf("%s %s[%s] [%s] %s%s", timestamp, color, levelStr, l.category, fullMessage, resetColor)
+	fmt.Println(logLine)
 }
 
-func (l *Logger) Info(message string)     { l.logMessage(Info, message) }
-func (l *Logger) Warning(message string)  { l.logMessage(Warning, message) }
-func (l *Logger) Critical(message string) { l.logMessage(Critical, message) }
+func (l *Logger) Info(messages ...string)     { l.logMessage(Info, messages...) }
+func (l *Logger) Warning(messages ...string)  { l.logMessage(Warning, messages...) }
+func (l *Logger) Critical(messages ...string) { l.logMessage(Critical, messages...) }
+
+var GlobalLogger = &Logger{}

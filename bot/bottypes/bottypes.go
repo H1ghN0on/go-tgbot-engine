@@ -1,8 +1,6 @@
 package bottypes
 
-type Command struct {
-	Text string
-}
+import "strings"
 
 type Button struct {
 	ChatID  int64
@@ -30,6 +28,16 @@ type Message struct {
 }
 
 type Trigger int
+
+type Command string
+
+func (cmd Command) String() string {
+	return string(cmd)
+}
+
+func (cmd Command) IsCommand() bool {
+	return strings.HasPrefix(string(cmd), "/")
+}
 
 const (
 	RemoveTrigger          Trigger = iota

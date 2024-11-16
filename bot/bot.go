@@ -3,8 +3,10 @@ package bot
 import (
 	"fmt"
 	"slices"
+	"strconv"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	"github.com/H1ghN0on/go-tgbot-engine/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -18,11 +20,10 @@ func (err BotError) Error() string {
 }
 
 type Client struct {
-	cmdhandler          CommandHandler
-	api                 *tgbotapi.BotAPI
-	lastMessage         bottypes.Message
-	messagesToRemove    []bottypes.Message
-	lastKeyboardMessage bottypes.Message
+	cmdhandler       CommandHandler
+	api              *tgbotapi.BotAPI
+	lastMessage      bottypes.Message
+	messagesToRemove []bottypes.Message
 }
 
 type HandlerResponser interface {
@@ -33,7 +34,6 @@ type HandlerResponser interface {
 
 type CommandHandlerRequester interface {
 	GetMessage() bottypes.Message
-	ShouldUpdateQueue() bool
 }
 
 type CommandHandlerResponser interface {
@@ -41,7 +41,7 @@ type CommandHandlerResponser interface {
 }
 
 type CommandHandler interface {
-	NewCommandHandlerRequest(msg bottypes.Message, shouldUpdateQueue bool) CommandHandlerRequester
+	NewCommandHandlerRequest(msg bottypes.Message) CommandHandlerRequester
 	Handle(req CommandHandlerRequester) (CommandHandlerResponser, error)
 }
 
@@ -100,27 +100,18 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 	hasButtons := len(message.ButtonRows) != 0
 
 	if client.lastMessage.ID == 0 {
-		return fmt.Errorf("keyboard is no message to attach")
+		return fmt.Errorf("keyboard has no message to attach")
 	}
-
-	if client.lastKeyboardMessage.ID == 0 {
-		client.lastKeyboardMessage.ID = client.lastMessage.ID
-	}
-
-	client.lastKeyboardMessage.ChatID = message.ChatID
-	client.lastKeyboardMessage.Text = message.Text
-	client.lastKeyboardMessage.ButtonRows = message.ButtonRows
-	attachMessage := client.lastKeyboardMessage
 
 	if hasText && message.Text != client.lastMessage.Text {
 		if hasButtons {
-			_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(attachMessage.ChatID, attachMessage.ID, message.Text, keyboard))
+			_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard))
 			if err != nil {
 				return err
 			}
 			return nil
 		} else {
-			_, err := client.api.Request(tgbotapi.NewEditMessageText(attachMessage.ChatID, attachMessage.ID, message.Text))
+			_, err := client.api.Request(tgbotapi.NewEditMessageText(client.lastMessage.ChatID, client.lastMessage.ID, message.Text))
 			if err != nil {
 				return err
 			}
@@ -128,7 +119,7 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 		}
 	} else {
 		if hasButtons {
-			_, err := client.api.Request(tgbotapi.NewEditMessageReplyMarkup(attachMessage.ChatID, attachMessage.ID, keyboard))
+			_, err := client.api.Request(tgbotapi.NewEditMessageReplyMarkup(client.lastMessage.ChatID, client.lastMessage.ID, keyboard))
 			if err != nil {
 				return err
 			}
@@ -151,10 +142,10 @@ func (client *Client) PrepareKeyboard(message bottypes.Message) (tgbotapi.Inline
 		for _, buttonRow := range message.ButtonRows {
 			var buttons []tgbotapi.InlineKeyboardButton
 			for _, button := range buttonRow.Buttons {
-				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, button.Command.Text))
+				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command)))
 			}
 			for _, button := range buttonRow.CheckboxButtons {
-				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, button.Command.Text))
+				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command)))
 			}
 			buttonRows = append(buttonRows, buttons)
 		}
@@ -282,69 +273,68 @@ func (client *Client) ListenMessages() {
 	u.Timeout = 60
 	updates := client.api.GetUpdatesChan(u)
 
+	logger.Bot().Info("listening messsages")
+
 	for update := range updates {
 		var receivedMessage bottypes.Message
 
 		receivedMessage, chatID, err := client.parseMessage(update)
+
 		if err != nil {
 			client.sendErrorMessage(chatID, fmt.Errorf("parse error: %w", err))
 			continue
 		}
 
-		req := client.cmdhandler.NewCommandHandlerRequest(receivedMessage, true)
+		logger.Bot().Info("new message received from", strconv.Itoa(int(receivedMessage.ChatID)))
+
+		req := client.cmdhandler.NewCommandHandlerRequest(receivedMessage)
 		handlerResult, err := client.cmdhandler.Handle(req)
 		if err != nil {
-			client.sendErrorMessage(chatID, fmt.Errorf("handle command error: %w", err))
+			client.sendErrorMessage(chatID, fmt.Errorf("bot error: %w", err))
 			continue
 		}
 
 		for _, response := range handlerResult.GetResponses() {
 			for _, message := range response.GetMessages() {
+
 				if message.ChatID == 0 {
+					logger.Bot().Critical("receiver of sending message is unknown")
 					panic("Chat ID = 0")
 				}
 
-				if response.ContainsTrigger(bottypes.NothingTrigger) {
+				if len(message.ButtonRows) == 0 && message.Text == "" {
+					logger.Bot().Warning("trying to send empty message, skipped")
 					continue
 				}
 
-				if response.ContainsTrigger(bottypes.StartKeyboardTrigger) {
+				if message.Text != "" && len(message.ButtonRows) == 0 {
+					err := client.SendText(message)
+					if err != nil {
+						panic(err)
+					}
+				} else if len(message.ButtonRows) != 0 && response.ContainsTrigger(bottypes.StartKeyboardTrigger) {
 					err := client.SendKeyboard(message)
-
 					if err != nil {
 						panic(err)
 					}
-
-					if response.ContainsTrigger(bottypes.AddToNextRemoveTrigger) {
-						if client.lastKeyboardMessage.ID != 0 {
-							client.addToRemoveMessagesQueue(client.lastKeyboardMessage)
-						} else {
-							client.addToRemoveMessagesQueue(client.lastMessage)
-						}
-					}
-
-				} else {
+				} else if len(message.ButtonRows) != 0 {
 					err := client.SendMessage(message)
-
 					if err != nil {
 						panic(err)
-					}
-
-					if response.ContainsTrigger(bottypes.AddToNextRemoveTrigger) {
-						client.addToRemoveMessagesQueue(client.lastMessage)
 					}
 				}
 
+				if response.ContainsTrigger(bottypes.AddToNextRemoveTrigger) {
+					logger.Bot().Info("message", strconv.Itoa(client.lastMessage.ID), "marked to remove")
+					client.addToRemoveMessagesQueue(client.lastMessage)
+				}
 			}
 			if response.ContainsTrigger(bottypes.RemoveTrigger) {
+				logger.Bot().Info("removing all marked messages")
 				err := client.removeMessagesByTrigger()
 				if err != nil {
 					panic(err)
 				}
-			}
-
-			if response.ContainsTrigger(bottypes.StopKeyboardTrigger) {
-				client.lastKeyboardMessage = bottypes.Message{}
 			}
 		}
 	}

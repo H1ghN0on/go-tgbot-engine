@@ -3,7 +3,9 @@ package statemachine
 import (
 	"slices"
 
+	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
+	"github.com/H1ghN0on/go-tgbot-engine/logger"
 )
 
 type Command string
@@ -16,9 +18,10 @@ type StateMachine struct {
 
 type State struct {
 	name              string
-	startCommand      string
-	availableCommands []string
+	startCommand      bottypes.Command
+	availableCommands []bottypes.Command
 	availableStates   []State
+	canRestart        bool
 }
 
 type StateMachineError struct {
@@ -29,7 +32,7 @@ func (err StateMachineError) Error() string {
 	return err.message
 }
 
-func (state State) GetStartCommand() string {
+func (state State) GetStartCommand() bottypes.Command {
 	return state.startCommand
 }
 
@@ -37,7 +40,7 @@ func (state State) GetName() string {
 	return state.name
 }
 
-func (state State) GetAvailableCommands() []string {
+func (state State) GetAvailableCommands() []bottypes.Command {
 	return state.availableCommands
 }
 
@@ -56,11 +59,16 @@ func (state *State) SetAvailableStates(newStates ...handlers.Stater) {
 	}
 }
 
-func NewState(name string, startCommand string, availableCommands ...string) *State {
+func (state State) CanRestart() bool {
+	return state.canRestart
+}
+
+func NewState(name string, startCommand bottypes.Command, availableCommands ...bottypes.Command) *State {
 	return &State{
 		name:              name,
 		startCommand:      startCommand,
 		availableCommands: availableCommands,
+		canRestart:        false,
 	}
 }
 
@@ -86,21 +94,22 @@ func (sm *StateMachine) SetStateByName(stateName string) error {
 
 func (sm *StateMachine) SetState(state handlers.Stater) error {
 	if state.GetName() == "" {
+		logger.StateMachine().Critical("state has empty name")
 		return StateMachineError{message: "State has empty name"}
 	}
 
 	idx := slices.IndexFunc(sm.states, sm.CompareStates(state.(State)))
 	if idx == -1 {
+		logger.StateMachine().Critical("state", sm.activeState.name)
 		return StateMachineError{message: "This state is not unavailable"}
-	}
-
-	if sm.activeState.GetName() == state.GetName() {
-		return nil
 	}
 
 	if sm.activeState.GetName() == "" || slices.ContainsFunc(sm.activeState.availableStates, sm.CompareStates(sm.states[idx])) {
 		sm.previousState = sm.activeState
 		sm.activeState = sm.states[idx]
+
+		logger.StateMachine().Info("state updated:", sm.activeState.name)
+
 		return nil
 	}
 	return StateMachineError{message: "Can not move to this state"}

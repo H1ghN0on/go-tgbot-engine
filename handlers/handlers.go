@@ -20,11 +20,19 @@ const (
 
 type Handler struct {
 	gs       GlobalStater
-	commands map[string][]func(params HandlerParams) HandlerResponse
+	commands map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error)
 }
 
-func (handler Handler) GetCommands() []string {
-	commands := make([]string, len(handler.commands))
+type HandlerResponseError struct {
+	message string
+}
+
+func (res HandlerResponseError) Error() string {
+	return res.message
+}
+
+func (handler Handler) GetCommands() []bottypes.Command {
+	commands := make([]bottypes.Command, len(handler.commands))
 
 	i := 0
 	for k := range handler.commands {
@@ -35,20 +43,16 @@ func (handler Handler) GetCommands() []string {
 	return commands
 }
 
-type SequentHandler struct {
-	Handler
-	commandSequence map[int]string
-	active          int
-}
-
 type HandlerParams struct {
 	message bottypes.Message
 }
 
 type HandlerResponse struct {
-	messages  []bottypes.Message
-	nextState string
-	triggers  []bottypes.Trigger
+	messages           []bottypes.Message
+	triggers           []bottypes.Trigger
+	nextState          string
+	postCommandsHandle []bottypes.Command
+	nextCommands       []bottypes.Command
 }
 
 func (hr HandlerResponse) GetMessages() []bottypes.Message {
@@ -69,21 +73,25 @@ func NewHandler(gs GlobalStater) *Handler {
 	}
 }
 
-func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResponse, modifiers []int) func(HandlerParams) HandlerResponse {
-	return func(params HandlerParams) HandlerResponse {
+func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) (HandlerResponse, error), modifiers []int) func(HandlerParams) (HandlerResponse, error) {
+	return func(params HandlerParams) (HandlerResponse, error) {
 		if slices.Contains(modifiers, Nothingness) {
 			return HandlerResponse{
 				triggers: []bottypes.Trigger{bottypes.NothingTrigger},
-			}
+			}, nil
 		}
 
-		response := handlerFoo(params)
+		response, err := handlerFoo(params)
+		if err != nil {
+			return HandlerResponse{}, err
+		}
+
 		for idx, message := range response.messages {
 
 			if slices.Contains(modifiers, StateBackable) {
 				response.messages[idx].ButtonRows = append(response.messages[idx].ButtonRows, bottypes.ButtonRows{
 					Buttons: []bottypes.Button{
-						{ChatID: message.ChatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
+						{ChatID: message.ChatID, Text: "Back", Command: "/back_state"},
 					},
 				})
 			}
@@ -91,7 +99,7 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResp
 			if slices.Contains(modifiers, CommandBackable) {
 				response.messages[idx].ButtonRows = append(response.messages[idx].ButtonRows, bottypes.ButtonRows{
 					Buttons: []bottypes.Button{
-						{ChatID: message.ChatID, Text: "Back", Command: bottypes.Command{Text: "/back_command"}},
+						{ChatID: message.ChatID, Text: "Back", Command: "/back_command"},
 					},
 				})
 			}
@@ -123,10 +131,18 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResp
 							newCheckboxButton.Text = emptyEmoji
 						}
 						response.messages[idx].ButtonRows[rowIdx].CheckboxButtons = append([]bottypes.CheckboxButton{newCheckboxButton}, response.messages[idx].ButtonRows[rowIdx].CheckboxButtons...)
-						response.messages[idx].ButtonRows[rowIdx].CheckboxButtons[checkboxIdx+1].Command.Text = "/nothingness"
+						response.messages[idx].ButtonRows[rowIdx].CheckboxButtons[checkboxIdx+1].Command = "/nothingness"
 					}
 				}
 			}
+		}
+
+		if slices.Contains(modifiers, StateBackable) {
+			response.nextCommands = append(response.nextCommands, "/back_state")
+		}
+
+		if slices.Contains(modifiers, CommandBackable) {
+			response.nextCommands = append(response.nextCommands, "/back_command")
 		}
 
 		if slices.Contains(modifiers, RemovableByTrigger) {
@@ -145,10 +161,10 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResp
 			response.triggers = append(response.triggers, bottypes.RemoveTrigger)
 		}
 
-		return response
+		return response, nil
 	}
 }
 
-func (handler *Handler) EmptyHandler(params HandlerParams) HandlerResponse {
-	return HandlerResponse{}
+func (handler *Handler) EmptyHandler(params HandlerParams) (HandlerResponse, error) {
+	return HandlerResponse{}, nil
 }
