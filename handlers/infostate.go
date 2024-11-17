@@ -33,13 +33,13 @@ func NewSetInfoHandler(gs GlobalStater) *SetInfoHandler {
 	return sh
 }
 
-func (handler *SetInfoHandler) Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error) {
+func (handler *SetInfoHandler) Handle(params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
 	var commandToHandle bottypes.Command
 
-	if command.IsCommand() {
-		commandToHandle = command
+	if params.message.Command.IsCommand() {
+		commandToHandle = params.command
 	} else {
 		commandToHandle = handler.nextCommand
 	}
@@ -62,7 +62,7 @@ func (handler *SetInfoHandler) Handle(command bottypes.Command, params HandlerPa
 
 func (handler *SetInfoHandler) SetInfoStartHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Let me know you a bit closer"}
 	res.messages = append(res.messages, retMessage)
@@ -75,7 +75,7 @@ func (handler *SetInfoHandler) SetInfoStartHandler(params HandlerParams) (Handle
 
 func (handler *SetInfoHandler) SetNameHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	handler.nextCommand = cmd.SetSurnameCommand
 
@@ -88,9 +88,9 @@ func (handler *SetInfoHandler) SetNameHandler(params HandlerParams) (HandlerResp
 
 func (handler *SetInfoHandler) SetSurnameHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
-	handler.gs.SetName(params.message.Text)
+	handler.gs.SetName(params.message.Info.Text)
 
 	handler.nextCommand = cmd.SetAgeCommand
 
@@ -103,9 +103,9 @@ func (handler *SetInfoHandler) SetSurnameHandler(params HandlerParams) (HandlerR
 
 func (handler *SetInfoHandler) SetAgeHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
-	handler.gs.SetSurname(params.message.Text)
+	handler.gs.SetSurname(params.message.Info.Text)
 
 	handler.nextCommand = cmd.SetInfoEndCommand
 
@@ -118,9 +118,9 @@ func (handler *SetInfoHandler) SetAgeHandler(params HandlerParams) (HandlerRespo
 
 func (handler *SetInfoHandler) SetInfoEndHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
-	age, err := strconv.Atoi(params.message.Text)
+	age, err := strconv.Atoi(params.message.Info.Text)
 
 	if err != nil {
 		retMessage := bottypes.Message{ChatID: chatID, Text: "Wrong age, try again!"}

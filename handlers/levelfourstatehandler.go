@@ -25,10 +25,10 @@ func NewLevelFourHandler(gs GlobalStater) *LevelFourHandler {
 	return h
 }
 
-func (handler *LevelFourHandler) Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error) {
+func (handler *LevelFourHandler) Handle(params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
-	handleFuncs, ok := handler.GetCommandFromMap(command)
+	handleFuncs, ok := handler.GetCommandFromMap(params.command)
 	if !ok {
 		panic("wrong handler")
 	}
@@ -49,7 +49,7 @@ func (handler *LevelFourHandler) Handle(command bottypes.Command, params Handler
 func (handler *LevelFourHandler) LevelFourStartHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	response := bottypes.Message{ChatID: chatID, Text: "YOUR FINAL SCENE BEGINS!"}
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
@@ -68,7 +68,7 @@ func (handler *LevelFourHandler) LevelFourStartHandler(params HandlerParams) (Ha
 func (handler *LevelFourHandler) LevelFourOneHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	response := bottypes.Message{ChatID: chatID, Text: "ONE!"}
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
@@ -86,7 +86,7 @@ func (handler *LevelFourHandler) LevelFourOneHandler(params HandlerParams) (Hand
 func (handler *LevelFourHandler) LevelFourTwoHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	response := bottypes.Message{ChatID: chatID, Text: "TWO!"}
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
@@ -104,7 +104,7 @@ func (handler *LevelFourHandler) LevelFourTwoHandler(params HandlerParams) (Hand
 func (handler *LevelFourHandler) LevelFourThreeHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	response := bottypes.Message{ChatID: chatID, Text: "THREE!"}
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
@@ -122,7 +122,7 @@ func (handler *LevelFourHandler) LevelFourThreeHandler(params HandlerParams) (Ha
 func (handler *LevelFourHandler) LevelFourFourHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "FOUR!"})
 	res.postCommandsHandle = append(res.postCommandsHandle, cmd.ShowCommandsCommand)
 	res.nextState = "start-state"

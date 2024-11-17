@@ -34,7 +34,7 @@ type HandlerResponser interface {
 }
 
 type CommandHandlerRequester interface {
-	GetMessage() bottypes.Message
+	GetMessage() bottypes.ParsedMessage
 }
 
 type CommandHandlerResponser interface {
@@ -42,43 +42,54 @@ type CommandHandlerResponser interface {
 }
 
 type CommandHandler interface {
-	NewCommandHandlerRequest(msg bottypes.Message) CommandHandlerRequester
+	NewCommandHandlerRequest(msg bottypes.ParsedMessage) CommandHandlerRequester
 	Handle(req CommandHandlerRequester) (CommandHandlerResponser, error)
 }
 
-func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.Message, int64, error) {
-	var receivedMessage bottypes.Message
+func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.ParsedMessage, int64, error) {
+	var receivedMessage bottypes.ParsedMessage
 	var chatID int64
 
 	if update.Message != nil {
 
 		chatID = update.Message.Chat.ID
 
-		receivedMessage = bottypes.Message{
-			ID:     update.Message.MessageID,
-			ChatID: chatID,
-			Text:   update.Message.Text,
+		receivedMessage = bottypes.ParsedMessage{
+			Info: bottypes.Message{
+				ID:     update.Message.MessageID,
+				ChatID: chatID,
+				Text:   update.Message.Text,
+			},
+			Command: bottypes.Command{
+				Command: update.Message.Text,
+				Data:    "",
+			},
 		}
-
 	} else if update.CallbackQuery != nil {
 
 		chatID = update.CallbackQuery.Message.Chat.ID
 
 		callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 		if _, err := client.api.Request(callback); err != nil {
-			return bottypes.Message{}, chatID, BotError{message: "callback request failed"}
+			return bottypes.ParsedMessage{}, chatID, BotError{message: "callback request failed"}
 		}
 
-		receivedMessage = bottypes.Message{
-			ID:     update.CallbackQuery.Message.MessageID,
-			ChatID: chatID,
-			Text:   update.CallbackQuery.Data}
+		receivedMessage = bottypes.ParsedMessage{
+			Info: bottypes.Message{
+				ID:     update.CallbackQuery.Message.MessageID,
+				ChatID: chatID,
+				Text:   update.CallbackQuery.Data,
+			},
+			Command: bottypes.Command{
+				Command: update.CallbackQuery.Data,
+				Data:    "",
+			}}
 
 	} else if update.EditedMessage != nil {
 		chatID = update.EditedMessage.Chat.ID
-		return bottypes.Message{}, chatID, BotError{message: "editing is forbidden"}
+		return bottypes.ParsedMessage{}, chatID, BotError{message: "editing is forbidden"}
 	} else {
-		return bottypes.Message{}, 0, BotError{message: "unknown message received"}
+		return bottypes.ParsedMessage{}, 0, BotError{message: "unknown message received"}
 	}
 
 	return receivedMessage, chatID, nil
@@ -143,7 +154,12 @@ func (client *Client) PrepareKeyboard(message bottypes.Message) (tgbotapi.Inline
 		for _, buttonRow := range message.ButtonRows {
 			var buttons []tgbotapi.InlineKeyboardButton
 			for _, button := range buttonRow.Buttons {
-				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command)))
+				if button.Data != "" {
+					buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command+"_"+button.Data)))
+				} else {
+					buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command)))
+				}
+
 			}
 			for _, button := range buttonRow.CheckboxButtons {
 				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command)))
@@ -310,7 +326,7 @@ func (client *Client) ListenMessages() {
 	logger.Bot().Info("listening messsages")
 
 	for update := range updates {
-		var receivedMessage bottypes.Message
+		var receivedMessage bottypes.ParsedMessage
 
 		receivedMessage, chatID, err := client.parseMessage(update)
 
@@ -319,7 +335,7 @@ func (client *Client) ListenMessages() {
 			continue
 		}
 
-		logger.Bot().Info("new message received from", strconv.Itoa(int(receivedMessage.ChatID)))
+		logger.Bot().Info("new message received from", strconv.Itoa(int(receivedMessage.Info.ChatID)))
 
 		req := client.cmdhandler.NewCommandHandlerRequest(receivedMessage)
 		handlerResult, err := client.cmdhandler.Handle(req)

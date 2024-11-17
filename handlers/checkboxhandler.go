@@ -32,10 +32,10 @@ func NewCheckboxHandler(gs GlobalStater) *CheckboxHandler {
 	return sh
 }
 
-func (handler *CheckboxHandler) Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error) {
+func (handler *CheckboxHandler) Handle(params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
-	handleFuncs, ok := handler.GetCommandFromMap(command)
+	handleFuncs, ok := handler.GetCommandFromMap(params.command)
 	if !ok {
 		panic("wrong handler")
 	}
@@ -53,7 +53,7 @@ func (handler *CheckboxHandler) Handle(command bottypes.Command, params HandlerP
 
 func (handler *CheckboxHandler) SetCheckboxesStartHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Let's try some checkboxes"}
 	res.messages = append(res.messages, retMessage)
@@ -64,7 +64,7 @@ func (handler *CheckboxHandler) SetCheckboxesStartHandler(params HandlerParams) 
 
 func (handler *CheckboxHandler) InitCheckboxesHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 	retMessage := bottypes.Message{ChatID: chatID, Text: ""}
 
 	handler.firstCheckbox = false
@@ -82,7 +82,7 @@ func (handler *CheckboxHandler) InitCheckboxesHandler(params HandlerParams) (Han
 
 func (handler *CheckboxHandler) FirstCheckboxHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	handler.firstCheckbox = !handler.firstCheckbox
 
@@ -97,7 +97,7 @@ func (handler *CheckboxHandler) FirstCheckboxHandler(params HandlerParams) (Hand
 
 func (handler *CheckboxHandler) SecondCheckboxHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	handler.secondCheckbox = !handler.secondCheckbox
 
@@ -112,7 +112,7 @@ func (handler *CheckboxHandler) SecondCheckboxHandler(params HandlerParams) (Han
 
 func (handler *CheckboxHandler) ThirdCheckboxHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	handler.thirdCheckbox = !handler.thirdCheckbox
 
@@ -127,7 +127,7 @@ func (handler *CheckboxHandler) ThirdCheckboxHandler(params HandlerParams) (Hand
 
 func (handler *CheckboxHandler) FourthCheckboxHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	handler.fourthCheckbox = !handler.fourthCheckbox
 
@@ -142,7 +142,7 @@ func (handler *CheckboxHandler) FourthCheckboxHandler(params HandlerParams) (Han
 
 func (handler *CheckboxHandler) AcceptCheckboxHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "You selected"})
 

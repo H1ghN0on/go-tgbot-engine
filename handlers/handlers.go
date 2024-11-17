@@ -55,7 +55,8 @@ func (handler Handler) GetCommandFromMap(command bottypes.Command) ([]func(Handl
 }
 
 type HandlerParams struct {
-	message bottypes.Message
+	command bottypes.Command
+	message bottypes.ParsedMessage
 }
 
 type HandlerResponse struct {

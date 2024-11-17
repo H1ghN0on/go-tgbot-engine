@@ -25,10 +25,10 @@ func NewKeyboardhandler(gs GlobalStater) *KeyboardHandler {
 	return h
 }
 
-func (handler *KeyboardHandler) Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error) {
+func (handler *KeyboardHandler) Handle(params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
-	handleFuncs, ok := handler.GetCommandFromMap(command)
+	handleFuncs, ok := handler.GetCommandFromMap(params.command)
 	if !ok {
 		panic("wrong handler")
 	}
@@ -55,7 +55,7 @@ func (handler *KeyboardHandler) KeyboardStartHandler(params HandlerParams) (Hand
 
 func (handler *KeyboardHandler) KeyboardOneHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Option 1"}
 
@@ -82,7 +82,7 @@ func (handler *KeyboardHandler) KeyboardOneHandler(params HandlerParams) (Handle
 
 func (handler *KeyboardHandler) KeyboardTwoHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Option 2"}
 
@@ -109,7 +109,7 @@ func (handler *KeyboardHandler) KeyboardTwoHandler(params HandlerParams) (Handle
 
 func (handler *KeyboardHandler) KeyboardThreeHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Option 3"}
 
@@ -137,7 +137,7 @@ func (handler *KeyboardHandler) KeyboardThreeHandler(params HandlerParams) (Hand
 
 func (handler *KeyboardHandler) KeyboardFinishHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Alabama certified moment"}
 	res.messages = append(res.messages, retMessage)

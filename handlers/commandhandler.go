@@ -46,11 +46,13 @@ type GlobalStater interface {
 	SetName(name string)
 	SetSurname(surname string)
 	SetAge(age int)
+
+	GetDataForDynamicKeyboard() map[string][]string
 }
 
 type Handlerable interface {
 	GetCommands() []bottypes.Command
-	Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error)
+	Handle(params HandlerParams) ([]HandlerResponse, error)
 }
 
 type BackHandlerable interface {
@@ -68,10 +70,10 @@ func (err CommandHandlerError) Error() string {
 }
 
 type CommandHandlerRequest struct {
-	receivedMessage bottypes.Message
+	receivedMessage bottypes.ParsedMessage
 }
 
-func (req CommandHandlerRequest) GetMessage() bottypes.Message {
+func (req CommandHandlerRequest) GetMessage() bottypes.ParsedMessage {
 	return req.receivedMessage
 }
 
@@ -108,7 +110,7 @@ func convertCommandsToString(commands []bottypes.Command) string {
 	return ret
 }
 
-func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.Message) bot.CommandHandlerRequester {
+func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.ParsedMessage) bot.CommandHandlerRequester {
 	return &CommandHandlerRequest{
 		receivedMessage: msg,
 	}
@@ -173,7 +175,7 @@ func (ch *CommandHandler) hasCommandInHandler(commands []bottypes.Command, handl
 	return false
 }
 
-func (ch *CommandHandler) handlePostCommands(message bottypes.Message, responses []HandlerResponse) ([]bot.HandlerResponser, error) {
+func (ch *CommandHandler) handlePostCommands(message bottypes.ParsedMessage, responses []HandlerResponse) ([]bot.HandlerResponser, error) {
 
 	var res []bot.HandlerResponser
 
@@ -191,7 +193,7 @@ func (ch *CommandHandler) handlePostCommands(message bottypes.Message, responses
 	return res, nil
 }
 
-func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessage bottypes.Message) (bot.CommandHandlerResponser, error) {
+func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessage bottypes.ParsedMessage) (bot.CommandHandlerResponser, error) {
 	var res CommandHandlerResponse
 
 	logger.CommandHandler().Info("trying to handle", command.String())
@@ -204,7 +206,7 @@ func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessag
 
 		if ch.checkCommandInHandler(commandToCheck, handler) {
 
-			responses, err := handler.Handle(command, HandlerParams{message: receivedMessage})
+			responses, err := handler.Handle(HandlerParams{command: commandToCheck, message: receivedMessage})
 
 			if err != nil {
 				logger.CommandHandler().Critical("error while handling command", command.String(), err.Error())
@@ -247,19 +249,18 @@ func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessag
 func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHandlerResponser, error) {
 
 	receivedMessage := req.GetMessage()
-	command := bottypes.Command{Command: receivedMessage.Text}
 
-	if !ch.checkCommandInNextCommands(command) {
-		logger.CommandHandler().Critical(command.String(), "is not in next commands (", convertCommandsToString(ch.nextCommands), ")")
+	if !ch.checkCommandInNextCommands(receivedMessage.Command) {
+		logger.CommandHandler().Critical(receivedMessage.Command.String(), "is not in next commands (", convertCommandsToString(ch.nextCommands), ")")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available (not in next commands)"}
 	}
 
-	if !ch.checkCommandInState(command) {
-		logger.CommandHandler().Critical(command.String(), "is not in state commands (", convertCommandsToString(ch.sm.GetActiveState().GetAvailableCommands()), ")")
+	if !ch.checkCommandInState(receivedMessage.Command) {
+		logger.CommandHandler().Critical(receivedMessage.Command.String(), "is not in state commands (", convertCommandsToString(ch.sm.GetActiveState().GetAvailableCommands()), ")")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available (not in state)"}
 	}
 
-	chRes, err := ch.handleCommand(command, receivedMessage)
+	chRes, err := ch.handleCommand(receivedMessage.Command, receivedMessage)
 	if err != nil {
 		return CommandHandlerResponse{}, err
 	}

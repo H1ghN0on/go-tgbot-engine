@@ -42,10 +42,10 @@ func (handler *BackHandler) ClearCommandQueue() {
 	handler.commandQueue = nil
 }
 
-func (handler *BackHandler) Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error) {
+func (handler *BackHandler) Handle(params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
-	handleFuncs, ok := handler.GetCommandFromMap(command)
+	handleFuncs, ok := handler.GetCommandFromMap(params.command)
 	if !ok {
 		panic("wrong handler")
 	}
