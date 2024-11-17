@@ -175,6 +175,13 @@ func (client *Client) SendKeyboard(message bottypes.Message) error {
 		return BotError{message: "Send keyboard error: " + err.Error()}
 	}
 
+	client.lastMessage = bottypes.Message{
+		ID:         client.lastMessage.ID,
+		ChatID:     client.lastMessage.ChatID,
+		Text:       message.Text,
+		ButtonRows: message.ButtonRows,
+	}
+
 	return nil
 }
 

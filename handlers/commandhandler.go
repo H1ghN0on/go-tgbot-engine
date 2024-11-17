@@ -143,7 +143,7 @@ func (ch *CommandHandler) updateNextCommands(responses []HandlerResponse) {
 }
 
 func isCommandInSlice(commands []bottypes.Command, command bottypes.Command) bool {
-	return slices.ContainsFunc(commands, func(cmd bottypes.Command) bool { return command.Command == cmd.Command })
+	return slices.ContainsFunc(commands, func(cmd bottypes.Command) bool { return command.Equal(cmd) })
 }
 
 func (ch *CommandHandler) checkCommandInState(command bottypes.Command) bool {
