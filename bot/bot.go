@@ -30,6 +30,7 @@ type HandlerResponser interface {
 	GetMessages() []bottypes.Message
 	NextState() string
 	ContainsTrigger(bottypes.Trigger) bool
+	GetNextCommands() []bottypes.Command
 }
 
 type CommandHandlerRequester interface {
@@ -274,6 +275,32 @@ func (client *Client) removeMessagesByTrigger() error {
 	return nil
 }
 
+func (client *Client) setMyCommands(chatID int64, res []HandlerResponser) error {
+	var commands []tgbotapi.BotCommand
+
+	if len(res) == 0 {
+		_, err := client.api.Request(tgbotapi.NewDeleteMyCommandsWithScope(tgbotapi.NewBotCommandScopeChat(chatID)))
+		return err
+	}
+
+	lastRes := res[len(res)-1]
+	nextCommands := lastRes.GetNextCommands()
+
+	if len(nextCommands) == 0 {
+		_, err := client.api.Request(tgbotapi.NewDeleteMyCommandsWithScope(tgbotapi.NewBotCommandScopeChat(chatID)))
+		return err
+	}
+
+	for _, command := range nextCommands {
+		commands = append(commands, tgbotapi.BotCommand{Command: command.Command, Description: command.Description})
+	}
+
+	_, err := client.api.Request(tgbotapi.NewSetMyCommandsWithScope(
+		tgbotapi.NewBotCommandScopeChat(chatID),
+		commands...))
+	return err
+}
+
 func (client *Client) ListenMessages() {
 
 	u := tgbotapi.NewUpdate(0)
@@ -299,11 +326,6 @@ func (client *Client) ListenMessages() {
 		if err != nil {
 			client.sendErrorMessage(chatID, fmt.Errorf("bot error: %w", err))
 			continue
-		}
-
-		_, err = client.api.Request(tgbotapi.NewSetMyCommands(tgbotapi.BotCommand{Command: "/show_commands", Description: "Команды"}))
-		if err != nil {
-			panic(err)
 		}
 
 		for _, response := range handlerResult.GetResponses() {
@@ -348,6 +370,11 @@ func (client *Client) ListenMessages() {
 					panic(err)
 				}
 			}
+		}
+
+		err = client.setMyCommands(chatID, handlerResult.GetResponses())
+		if err != nil {
+			panic(err)
 		}
 	}
 }

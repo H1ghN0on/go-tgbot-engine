@@ -78,6 +78,10 @@ func (hr HandlerResponse) ContainsTrigger(trigger bottypes.Trigger) bool {
 	return slices.Contains(hr.triggers, trigger)
 }
 
+func (hr HandlerResponse) GetNextCommands() []bottypes.Command {
+	return hr.nextCommands
+}
+
 func NewHandler(gs GlobalStater) *Handler {
 	return &Handler{
 		gs: gs,
