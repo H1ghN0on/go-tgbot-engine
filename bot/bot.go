@@ -57,10 +57,7 @@ func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.ParsedMessa
 
 		chatID = update.Message.Chat.ID
 
-		command, err := client.parseCommand(update.Message.Text)
-		if err != nil {
-			panic(err)
-		}
+		command := client.parseCommand(update.Message.Text)
 
 		receivedMessage = bottypes.ParsedMessage{
 			Info: bottypes.Message{
@@ -79,10 +76,7 @@ func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.ParsedMessa
 			return bottypes.ParsedMessage{}, chatID, BotError{message: "callback request failed"}
 		}
 
-		command, err := client.parseCommand(update.CallbackQuery.Data)
-		if err != nil {
-			panic(err)
-		}
+		command := client.parseCommand(update.CallbackQuery.Data)
 
 		receivedMessage = bottypes.ParsedMessage{
 			Info: bottypes.Message{
@@ -103,7 +97,7 @@ func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.ParsedMessa
 	return receivedMessage, chatID, nil
 }
 
-func (client Client) parseCommand(text string) (bottypes.Command, error) {
+func (client Client) parseCommand(text string) bottypes.Command {
 	command := bottypes.Command{
 		Command: text,
 		Data:    "",
@@ -115,12 +109,12 @@ func (client Client) parseCommand(text string) (bottypes.Command, error) {
 
 		for _, exception := range client.nextCommandToParse.Exceptions {
 			if exception.Command == text {
-				return command, nil
+				return command
 			}
 		}
 
 		if !strings.HasPrefix(text, commandToParse.Command) {
-			return bottypes.Command{}, fmt.Errorf("no prefix")
+			return command
 		}
 
 		data, _ := strings.CutPrefix(text, commandToParse.Command)
@@ -128,7 +122,7 @@ func (client Client) parseCommand(text string) (bottypes.Command, error) {
 		command.Data = data
 	}
 
-	return command, nil
+	return command
 }
 
 func (client Client) compareMessages(a bottypes.Message) func(bottypes.Message) bool {

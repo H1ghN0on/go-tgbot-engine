@@ -67,7 +67,10 @@ func (handler *BackHandler) BackStateHandler(params HandlerParams) (HandlerRespo
 	prevState := handler.sm.GetPreviousState()
 	newActiveCommand := prevState.GetStartCommand()
 
-	return HandlerResponse{messages: res.messages, nextState: prevState.GetName(), postCommandsHandle: []bottypes.Command{newActiveCommand}}, nil
+	res.nextState = prevState.GetName()
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, newActiveCommand)
+
+	return res, nil
 }
 
 func (handler *BackHandler) BackCommandHandler(params HandlerParams) (HandlerResponse, error) {
@@ -80,5 +83,8 @@ func (handler *BackHandler) BackCommandHandler(params HandlerParams) (HandlerRes
 	currentCommand := handler.commandQueue[len(handler.commandQueue)-2]
 	handler.commandQueue = handler.commandQueue[:len(handler.commandQueue)-1]
 
-	return HandlerResponse{messages: res.messages, postCommandsHandle: []bottypes.Command{currentCommand}}, nil
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, currentCommand)
+	res.postCommandsHandle.isBackCommand = true
+
+	return res, nil
 }

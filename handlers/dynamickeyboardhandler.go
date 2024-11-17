@@ -29,6 +29,32 @@ func NewDynamicKeyboardhandler(gs GlobalStater) *DynamicKeyboardHandler {
 	return h
 }
 
+func (handler *DynamicKeyboardHandler) HandleBackCommand(params HandlerParams) ([]HandlerResponse, error) {
+	var response []HandlerResponse
+
+	backHandler := handler.ModifyHandler(handler.HandleBackCommandImpl, []int{RemovableByTrigger})
+
+	res, err := backHandler(params)
+
+	if err != nil {
+		return response, err
+	}
+
+	response = append(response, res)
+	return response, nil
+}
+
+func (handler *DynamicKeyboardHandler) HandleBackCommandImpl(params HandlerParams) (HandlerResponse, error) {
+	handler.selectedItems = handler.selectedItems[:len(handler.selectedItems)-1]
+
+	var response HandlerResponse
+	retMessage := bottypes.Message{ChatID: params.message.Info.ChatID, Text: "You clicked back"}
+	retMessage2 := bottypes.Message{ChatID: params.message.Info.ChatID, Text: "ㅤ"}
+	response.messages = append(response.messages, retMessage, retMessage2)
+
+	return response, nil
+}
+
 func (handler *DynamicKeyboardHandler) Handle(params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
@@ -52,7 +78,7 @@ func (handler *DynamicKeyboardHandler) DynamicKeyboardStartHandler(params Handle
 	var res HandlerResponse
 
 	handler.selectedItems = nil
-	res.postCommandsHandle = append(res.postCommandsHandle, cmd.DynamicKeyboardFirstStageCommand)
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.DynamicKeyboardFirstStageCommand)
 	res.nextState = "dynamic-keyboard-state"
 
 	return res, nil
@@ -95,13 +121,10 @@ func (handler *DynamicKeyboardHandler) DynamicKeyboardSecondHandler(params Handl
 	data := handler.gs.GetDataForDynamicKeyboard()
 
 	if !slices.Contains(data["first_stage"], params.command.Data) {
-		retMessage := bottypes.Message{ChatID: chatID, Text: "Wrong value, try again!"}
-
-		// Тут можно прокинуть данные, которых нет
-		// Нужно вывести ошибку и заново обработать команду
-
-		// res.postCommandsHandle = append(res.postCommandsHandle, cmd.DynamicKeyboardSecondStageCommand)
-		res.messages = append(res.messages, retMessage)
+		res.nextCommandToParse = bottypes.ParseableCommand{
+			Command: cmd.DynamicKeyboardSecondStageCommand,
+		}
+		res.nextCommands = append(res.nextCommands, cmd.DynamicKeyboardSecondStageCommand)
 		return res, nil
 	}
 
@@ -136,7 +159,7 @@ func (handler *DynamicKeyboardHandler) DynamicKeyboardFinishHandler(params Handl
 	retMessage := bottypes.Message{ChatID: chatID, Text: "You selected " + messageText}
 	res.messages = append(res.messages, retMessage)
 
-	res.postCommandsHandle = append(res.postCommandsHandle, cmd.ShowCommandsCommand)
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.ShowCommandsCommand)
 	res.nextState = "start-state"
 
 	return res, nil

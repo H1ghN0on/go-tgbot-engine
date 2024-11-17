@@ -24,6 +24,10 @@ type Handler struct {
 	commands map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error)
 }
 
+func (handler *Handler) HandleBackCommand(params HandlerParams) ([]HandlerResponse, error) {
+	return []HandlerResponse{}, nil
+}
+
 type HandlerResponseError struct {
 	message string
 }
@@ -63,9 +67,14 @@ type HandlerResponse struct {
 	messages           []bottypes.Message
 	triggers           []bottypes.Trigger
 	nextState          string
-	postCommandsHandle []bottypes.Command
+	postCommandsHandle PostCommands
 	nextCommands       []bottypes.Command
 	nextCommandToParse bottypes.ParseableCommand
+}
+
+type PostCommands struct {
+	commands      []bottypes.Command
+	isBackCommand bool
 }
 
 func (hr HandlerResponse) GetMessages() []bottypes.Message {

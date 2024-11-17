@@ -67,7 +67,7 @@ func (handler *SetInfoHandler) SetInfoStartHandler(params HandlerParams) (Handle
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Let me know you a bit closer"}
 	res.messages = append(res.messages, retMessage)
 	handler.nextCommand = cmd.SetNameCommand
-	res.postCommandsHandle = append(res.postCommandsHandle, cmd.SetNameCommand)
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.SetNameCommand)
 	res.nextState = "info-state"
 
 	return res, nil
@@ -134,7 +134,7 @@ func (handler *SetInfoHandler) SetInfoEndHandler(params HandlerParams) (HandlerR
 	retMessage := bottypes.Message{ChatID: chatID, Text: "My gratitude"}
 	res.messages = append(res.messages, retMessage)
 
-	res.postCommandsHandle = append(res.postCommandsHandle, cmd.ShowCommandsCommand)
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.ShowCommandsCommand)
 	res.nextState = "start-state"
 
 	return res, nil

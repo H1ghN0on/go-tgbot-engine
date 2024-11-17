@@ -47,7 +47,7 @@ func (handler *KeyboardHandler) Handle(params HandlerParams) ([]HandlerResponse,
 func (handler *KeyboardHandler) KeyboardStartHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	res.postCommandsHandle = append(res.postCommandsHandle, cmd.KeyboardOneCommand)
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.KeyboardOneCommand)
 	res.nextState = "keyboard-state"
 
 	return res, nil
@@ -142,7 +142,7 @@ func (handler *KeyboardHandler) KeyboardFinishHandler(params HandlerParams) (Han
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Alabama certified moment"}
 	res.messages = append(res.messages, retMessage)
 
-	res.postCommandsHandle = append(res.postCommandsHandle, cmd.ShowCommandsCommand)
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.ShowCommandsCommand)
 	res.nextState = "start-state"
 
 	return res, nil

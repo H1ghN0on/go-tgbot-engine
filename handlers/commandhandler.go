@@ -53,6 +53,7 @@ type GlobalStater interface {
 type Handlerable interface {
 	GetCommands() []bottypes.Command
 	Handle(params HandlerParams) ([]HandlerResponse, error)
+	HandleBackCommand(params HandlerParams) ([]HandlerResponse, error)
 }
 
 type BackHandlerable interface {
@@ -180,20 +181,24 @@ func (ch *CommandHandler) handlePostCommands(message bottypes.ParsedMessage, res
 	var res []bot.HandlerResponser
 
 	for idx, response := range responses {
-		for _, commandToHandle := range response.postCommandsHandle {
-			handleRes, err := ch.handleCommand(commandToHandle, message)
+		for _, commandToHandle := range response.postCommandsHandle.commands {
+			handleRes, err := ch.handleCommand(commandToHandle, message, response.postCommandsHandle.isBackCommand)
 			if err != nil {
 				return []bot.HandlerResponser{}, CommandHandlerError{message: "handle post commands: " + err.Error()}
 			}
 			res = append(res, handleRes.GetResponses()...)
 		}
-		responses[idx].postCommandsHandle = nil
+		responses[idx].postCommandsHandle.commands = nil
 	}
 
 	return res, nil
 }
 
-func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessage bottypes.ParsedMessage) (bot.CommandHandlerResponser, error) {
+func (ch *CommandHandler) handleCommand(
+	command bottypes.Command,
+	receivedMessage bottypes.ParsedMessage,
+	shouldHandleBack bool) (bot.CommandHandlerResponser, error) {
+
 	var res CommandHandlerResponse
 
 	logger.CommandHandler().Info("trying to handle", command.String())
@@ -206,6 +211,16 @@ func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessag
 
 		if ch.checkCommandInHandler(commandToCheck, handler) {
 
+			if shouldHandleBack {
+				responses, err := handler.HandleBackCommand(HandlerParams{command: commandToCheck, message: receivedMessage})
+
+				if err != nil {
+					logger.CommandHandler().Critical("error while handling command", command.String(), err.Error())
+					return CommandHandlerResponse{}, CommandHandlerError{message: err.Error()}
+				}
+				res.responses = append(res.responses, responses...)
+			}
+
 			responses, err := handler.Handle(HandlerParams{command: commandToCheck, message: receivedMessage})
 
 			if err != nil {
@@ -214,7 +229,7 @@ func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessag
 			}
 
 			ch.backHandler.UpdateLastCommand(command)
-			res.responses = responses
+			res.responses = append(res.responses, responses...)
 			break
 		}
 	}
@@ -260,7 +275,7 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available (not in state)"}
 	}
 
-	chRes, err := ch.handleCommand(receivedMessage.Command, receivedMessage)
+	chRes, err := ch.handleCommand(receivedMessage.Command, receivedMessage, false)
 	if err != nil {
 		return CommandHandlerResponse{}, err
 	}

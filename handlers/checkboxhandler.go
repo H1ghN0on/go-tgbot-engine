@@ -162,7 +162,7 @@ func (handler *CheckboxHandler) AcceptCheckboxHandler(params HandlerParams) (Han
 		res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "Fourth"})
 	}
 
-	res.postCommandsHandle = append(res.postCommandsHandle, cmd.ShowCommandsCommand)
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.ShowCommandsCommand)
 	res.nextState = "start-state"
 
 	return res, nil
