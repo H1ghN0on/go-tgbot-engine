@@ -25,10 +25,10 @@ func NewKeyboardhandler(gs GlobalStater) *KeyboardHandler {
 	return h
 }
 
-func (handler *KeyboardHandler) Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error) {
+func (handler *KeyboardHandler) Handle(params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
-	handleFuncs, ok := handler.GetCommandFromMap(command)
+	handleFuncs, ok := handler.GetCommandFromMap(params.command)
 	if !ok {
 		panic("wrong handler")
 	}
@@ -47,7 +47,7 @@ func (handler *KeyboardHandler) Handle(command bottypes.Command, params HandlerP
 func (handler *KeyboardHandler) KeyboardStartHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	res.postCommandsHandle = append(res.postCommandsHandle, cmd.KeyboardOneCommand)
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.KeyboardOneCommand)
 	res.nextState = "keyboard-state"
 
 	return res, nil
@@ -55,7 +55,7 @@ func (handler *KeyboardHandler) KeyboardStartHandler(params HandlerParams) (Hand
 
 func (handler *KeyboardHandler) KeyboardOneHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Option 1"}
 
@@ -82,7 +82,7 @@ func (handler *KeyboardHandler) KeyboardOneHandler(params HandlerParams) (Handle
 
 func (handler *KeyboardHandler) KeyboardTwoHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Option 2"}
 
@@ -109,7 +109,7 @@ func (handler *KeyboardHandler) KeyboardTwoHandler(params HandlerParams) (Handle
 
 func (handler *KeyboardHandler) KeyboardThreeHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Option 3"}
 
@@ -137,12 +137,12 @@ func (handler *KeyboardHandler) KeyboardThreeHandler(params HandlerParams) (Hand
 
 func (handler *KeyboardHandler) KeyboardFinishHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Alabama certified moment"}
 	res.messages = append(res.messages, retMessage)
 
-	res.postCommandsHandle = append(res.postCommandsHandle, cmd.ShowCommandsCommand)
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.ShowCommandsCommand)
 	res.nextState = "start-state"
 
 	return res, nil

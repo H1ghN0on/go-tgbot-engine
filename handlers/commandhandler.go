@@ -46,11 +46,14 @@ type GlobalStater interface {
 	SetName(name string)
 	SetSurname(surname string)
 	SetAge(age int)
+
+	GetDataForDynamicKeyboard() map[string][]string
 }
 
 type Handlerable interface {
 	GetCommands() []bottypes.Command
-	Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error)
+	Handle(params HandlerParams) ([]HandlerResponse, error)
+	HandleBackCommand(params HandlerParams) ([]HandlerResponse, error)
 }
 
 type BackHandlerable interface {
@@ -68,10 +71,10 @@ func (err CommandHandlerError) Error() string {
 }
 
 type CommandHandlerRequest struct {
-	receivedMessage bottypes.Message
+	receivedMessage bottypes.ParsedMessage
 }
 
-func (req CommandHandlerRequest) GetMessage() bottypes.Message {
+func (req CommandHandlerRequest) GetMessage() bottypes.ParsedMessage {
 	return req.receivedMessage
 }
 
@@ -108,7 +111,7 @@ func convertCommandsToString(commands []bottypes.Command) string {
 	return ret
 }
 
-func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.Message) bot.CommandHandlerRequester {
+func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.ParsedMessage) bot.CommandHandlerRequester {
 	return &CommandHandlerRequest{
 		receivedMessage: msg,
 	}
@@ -173,25 +176,29 @@ func (ch *CommandHandler) hasCommandInHandler(commands []bottypes.Command, handl
 	return false
 }
 
-func (ch *CommandHandler) handlePostCommands(message bottypes.Message, responses []HandlerResponse) ([]bot.HandlerResponser, error) {
+func (ch *CommandHandler) handlePostCommands(message bottypes.ParsedMessage, responses []HandlerResponse) ([]bot.HandlerResponser, error) {
 
 	var res []bot.HandlerResponser
 
 	for idx, response := range responses {
-		for _, commandToHandle := range response.postCommandsHandle {
-			handleRes, err := ch.handleCommand(commandToHandle, message)
+		for _, commandToHandle := range response.postCommandsHandle.commands {
+			handleRes, err := ch.handleCommand(commandToHandle, message, response.postCommandsHandle.isBackCommand)
 			if err != nil {
 				return []bot.HandlerResponser{}, CommandHandlerError{message: "handle post commands: " + err.Error()}
 			}
 			res = append(res, handleRes.GetResponses()...)
 		}
-		responses[idx].postCommandsHandle = nil
+		responses[idx].postCommandsHandle.commands = nil
 	}
 
 	return res, nil
 }
 
-func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessage bottypes.Message) (bot.CommandHandlerResponser, error) {
+func (ch *CommandHandler) handleCommand(
+	command bottypes.Command,
+	receivedMessage bottypes.ParsedMessage,
+	shouldHandleBack bool) (bot.CommandHandlerResponser, error) {
+
 	var res CommandHandlerResponse
 
 	logger.CommandHandler().Info("trying to handle", command.String())
@@ -204,7 +211,17 @@ func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessag
 
 		if ch.checkCommandInHandler(commandToCheck, handler) {
 
-			responses, err := handler.Handle(command, HandlerParams{message: receivedMessage})
+			if shouldHandleBack {
+				responses, err := handler.HandleBackCommand(HandlerParams{command: commandToCheck, message: receivedMessage})
+
+				if err != nil {
+					logger.CommandHandler().Critical("error while handling command", command.String(), err.Error())
+					return CommandHandlerResponse{}, CommandHandlerError{message: err.Error()}
+				}
+				res.responses = append(res.responses, responses...)
+			}
+
+			responses, err := handler.Handle(HandlerParams{command: commandToCheck, message: receivedMessage})
 
 			if err != nil {
 				logger.CommandHandler().Critical("error while handling command", command.String(), err.Error())
@@ -212,7 +229,7 @@ func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessag
 			}
 
 			ch.backHandler.UpdateLastCommand(command)
-			res.responses = responses
+			res.responses = append(res.responses, responses...)
 			break
 		}
 	}
@@ -247,19 +264,18 @@ func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessag
 func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHandlerResponser, error) {
 
 	receivedMessage := req.GetMessage()
-	command := bottypes.Command{Command: receivedMessage.Text}
 
-	if !ch.checkCommandInNextCommands(command) {
-		logger.CommandHandler().Critical(command.String(), "is not in next commands (", convertCommandsToString(ch.nextCommands), ")")
+	if !ch.checkCommandInNextCommands(receivedMessage.Command) {
+		logger.CommandHandler().Critical(receivedMessage.Command.String(), "is not in next commands (", convertCommandsToString(ch.nextCommands), ")")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available (not in next commands)"}
 	}
 
-	if !ch.checkCommandInState(command) {
-		logger.CommandHandler().Critical(command.String(), "is not in state commands (", convertCommandsToString(ch.sm.GetActiveState().GetAvailableCommands()), ")")
+	if !ch.checkCommandInState(receivedMessage.Command) {
+		logger.CommandHandler().Critical(receivedMessage.Command.String(), "is not in state commands (", convertCommandsToString(ch.sm.GetActiveState().GetAvailableCommands()), ")")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available (not in state)"}
 	}
 
-	chRes, err := ch.handleCommand(command, receivedMessage)
+	chRes, err := ch.handleCommand(receivedMessage.Command, receivedMessage, false)
 	if err != nil {
 		return CommandHandlerResponse{}, err
 	}
@@ -278,6 +294,7 @@ func NewCommandHandler(sm StateMachiner, gs GlobalStater) *CommandHandler {
 	levelFourHandler := NewLevelFourHandler(gs)
 	startHandler := NewStartHandler(gs)
 	checkboxHandler := NewCheckboxHandler(gs)
+	dynamicKeyboardHandler := NewDynamicKeyboardhandler(gs)
 	backHandler := NewBackHandler(gs, sm)
 
 	ch.handlers = append(ch.handlers,
@@ -286,6 +303,7 @@ func NewCommandHandler(sm StateMachiner, gs GlobalStater) *CommandHandler {
 		levelFourHandler,
 		startHandler,
 		checkboxHandler,
+		dynamicKeyboardHandler,
 		backHandler)
 
 	ch.backHandler = backHandler

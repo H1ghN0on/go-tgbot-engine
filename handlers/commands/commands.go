@@ -44,3 +44,9 @@ var LevelFourOneCommand bottypes.Command = bottypes.Command{Command: "/level_fou
 var LevelFourTwoCommand bottypes.Command = bottypes.Command{Command: "/level_four_two", Description: "ДВА"}
 var LevelFourThreeCommand bottypes.Command = bottypes.Command{Command: "/level_four_three", Description: "ТРИ"}
 var LevelFourFourCommand bottypes.Command = bottypes.Command{Command: "/level_four_four", Description: "ЧЕТЫРЕ"}
+
+// Dynamic Keyboard Handler
+var DynamicKeyboardStartCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_start", Description: "Запуск динамической клавиатуры"}
+var DynamicKeyboardFirstStageCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_first_stage", Description: "Первая фаза динамической клавиатуры"}
+var DynamicKeyboardSecondStageCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_second_stage", Description: "Вторая фаза динамической клавиатуры"}
+var DynamicKeyboardFinishCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_finish", Description: "Завершение динамической клавиатуры"}

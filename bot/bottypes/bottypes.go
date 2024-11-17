@@ -6,6 +6,7 @@ type Button struct {
 	ChatID  int64
 	Text    string
 	Command Command
+	Data    string
 }
 
 type CheckboxButton struct {
@@ -27,11 +28,17 @@ type Message struct {
 	ButtonRows []ButtonRows
 }
 
+type ParsedMessage struct {
+	Info    Message
+	Command Command
+}
+
 type Trigger int
 
 type Command struct {
 	Command     string
 	Description string
+	Data        string
 }
 
 func (cmd Command) String() string {
@@ -44,6 +51,11 @@ func (cmd Command) IsCommand() bool {
 
 func (cmd Command) Equal(other Command) bool {
 	return cmd.Command == other.Command
+}
+
+type ParseableCommand struct {
+	Command    Command
+	Exceptions []Command
 }
 
 const (

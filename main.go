@@ -32,6 +32,7 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		cmd.BigMessagesCommand,
 		cmd.SetInfoStartCommand,
 		cmd.CheckboxStartCommand,
+		cmd.DynamicKeyboardStartCommand,
 	)
 
 	levelFourState := statemachine.NewState(
@@ -91,13 +92,26 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		cmd.NothingnessCommand,
 	)
 
-	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState, *startState)
+	dynamicKeyboardState := statemachine.NewState(
+		"dynamic-keyboard-state",
+
+		cmd.DynamicKeyboardStartCommand,
+
+		cmd.DynamicKeyboardFirstStageCommand,
+		cmd.DynamicKeyboardSecondStageCommand,
+		cmd.DynamicKeyboardFinishCommand,
+		cmd.BackStateCommand,
+		cmd.BackCommandCommand,
+	)
+
+	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState, *startState, *dynamicKeyboardState)
 	levelFourState.SetAvailableStates(*startState)
 	keyboardState.SetAvailableStates(*startState)
 	infoState.SetAvailableStates((*startState))
 	checkboxState.SetAvailableStates((*startState))
+	dynamicKeyboardState.SetAvailableStates((*startState))
 
-	sm.AddStates(*startState, *levelFourState, *keyboardState, *infoState, *checkboxState)
+	sm.AddStates(*startState, *levelFourState, *keyboardState, *infoState, *checkboxState, *dynamicKeyboardState)
 
 	err := sm.SetStateByName("start-state")
 	if err != nil {
