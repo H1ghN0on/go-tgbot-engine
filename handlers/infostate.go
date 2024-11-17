@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
 )
 
 type SetInfoHandler struct {
@@ -17,16 +18,16 @@ func NewSetInfoHandler(gs GlobalStater) *SetInfoHandler {
 	sh.gs = gs
 
 	sh.commands = map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error){
-		"/set_info_start": {
+		cmd.SetInfoStartCommand: {
 			sh.SetInfoStartHandler,
 		},
 
 		// Не работает модификатор CommandBackable
-		"/set_name":     {sh.ModifyHandler(sh.SetNameHandler, []int{StateBackable})},
-		"/set_surname":  {sh.ModifyHandler(sh.SetSurnameHandler, []int{StateBackable})},
-		"/set_age":      {sh.ModifyHandler(sh.SetAgeHandler, []int{StateBackable})},
-		"/set_info_end": {sh.SetInfoEndHandler},
-		"*":             {},
+		cmd.SetNameCommand:    {sh.ModifyHandler(sh.SetNameHandler, []int{StateBackable})},
+		cmd.SetSurnameCommand: {sh.ModifyHandler(sh.SetSurnameHandler, []int{StateBackable})},
+		cmd.SetAgeCommand:     {sh.ModifyHandler(sh.SetAgeHandler, []int{StateBackable})},
+		cmd.SetInfoEndCommand: {sh.SetInfoEndHandler},
+		cmd.AnyCommand:        {},
 	}
 
 	return sh
@@ -43,7 +44,7 @@ func (handler *SetInfoHandler) Handle(command bottypes.Command, params HandlerPa
 		commandToHandle = handler.nextCommand
 	}
 
-	handleFuncs, ok := handler.Handler.commands[commandToHandle]
+	handleFuncs, ok := handler.GetCommandFromMap(commandToHandle)
 	if !ok {
 		panic("wrong handler")
 	}
@@ -65,8 +66,8 @@ func (handler *SetInfoHandler) SetInfoStartHandler(params HandlerParams) (Handle
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Let me know you a bit closer"}
 	res.messages = append(res.messages, retMessage)
-	handler.nextCommand = "/set_name"
-	res.postCommandsHandle = append(res.postCommandsHandle, "/set_name")
+	handler.nextCommand = cmd.SetNameCommand
+	res.postCommandsHandle = append(res.postCommandsHandle, cmd.SetNameCommand)
 	res.nextState = "info-state"
 
 	return res, nil
@@ -76,11 +77,11 @@ func (handler *SetInfoHandler) SetNameHandler(params HandlerParams) (HandlerResp
 	var res HandlerResponse
 	chatID := params.message.ChatID
 
-	handler.nextCommand = "/set_surname"
+	handler.nextCommand = cmd.SetSurnameCommand
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Enter your name"}
 	res.messages = append(res.messages, retMessage)
-	res.nextCommands = append(res.nextCommands, "*")
+	res.nextCommands = append(res.nextCommands, cmd.AnyCommand)
 
 	return res, nil
 }
@@ -91,11 +92,11 @@ func (handler *SetInfoHandler) SetSurnameHandler(params HandlerParams) (HandlerR
 
 	handler.gs.SetName(params.message.Text)
 
-	handler.nextCommand = "/set_age"
+	handler.nextCommand = cmd.SetAgeCommand
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Enter your surname"}
 	res.messages = append(res.messages, retMessage)
-	res.nextCommands = append(res.nextCommands, "*")
+	res.nextCommands = append(res.nextCommands, cmd.AnyCommand)
 
 	return res, nil
 }
@@ -106,11 +107,11 @@ func (handler *SetInfoHandler) SetAgeHandler(params HandlerParams) (HandlerRespo
 
 	handler.gs.SetSurname(params.message.Text)
 
-	handler.nextCommand = "/set_info_end"
+	handler.nextCommand = cmd.SetInfoEndCommand
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Enter your age"}
 	res.messages = append(res.messages, retMessage)
-	res.nextCommands = append(res.nextCommands, "*")
+	res.nextCommands = append(res.nextCommands, cmd.AnyCommand)
 
 	return res, nil
 }
@@ -124,7 +125,7 @@ func (handler *SetInfoHandler) SetInfoEndHandler(params HandlerParams) (HandlerR
 	if err != nil {
 		retMessage := bottypes.Message{ChatID: chatID, Text: "Wrong age, try again!"}
 		res.messages = append(res.messages, retMessage)
-		res.nextCommands = append(res.nextCommands, "*", "/back_state")
+		res.nextCommands = append(res.nextCommands, cmd.AnyCommand, cmd.BackStateCommand)
 		return res, nil
 	}
 
@@ -133,7 +134,7 @@ func (handler *SetInfoHandler) SetInfoEndHandler(params HandlerParams) (HandlerR
 	retMessage := bottypes.Message{ChatID: chatID, Text: "My gratitude"}
 	res.messages = append(res.messages, retMessage)
 
-	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
+	res.postCommandsHandle = append(res.postCommandsHandle, cmd.ShowCommandsCommand)
 	res.nextState = "start-state"
 
 	return res, nil

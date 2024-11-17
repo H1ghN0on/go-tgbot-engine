@@ -1,6 +1,9 @@
 package handlers
 
-import "github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+import (
+	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
+)
 
 type LevelFourHandler struct {
 	Handler
@@ -12,11 +15,11 @@ func NewLevelFourHandler(gs GlobalStater) *LevelFourHandler {
 	h.gs = gs
 
 	h.commands = map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error){
-		"/level_four_start": {h.ModifyHandler(h.LevelFourStartHandler, []int{StateBackable, RemovableByTrigger})},
-		"/level_four_one":   {h.ModifyHandler(h.LevelFourOneHandler, []int{StateBackable, RemovableByTrigger})},
-		"/level_four_two":   {h.ModifyHandler(h.LevelFourTwoHandler, []int{StateBackable, RemovableByTrigger})},
-		"/level_four_three": {h.ModifyHandler(h.LevelFourThreeHandler, []int{StateBackable, RemovableByTrigger})},
-		"/level_four_four":  {h.ModifyHandler(h.LevelFourFourHandler, []int{RemovableByTrigger, RemoveTriggerer})},
+		cmd.LevelFourStartCommand: {h.ModifyHandler(h.LevelFourStartHandler, []int{StateBackable, RemovableByTrigger})},
+		cmd.LevelFourOneCommand:   {h.ModifyHandler(h.LevelFourOneHandler, []int{StateBackable, RemovableByTrigger})},
+		cmd.LevelFourTwoCommand:   {h.ModifyHandler(h.LevelFourTwoHandler, []int{StateBackable, RemovableByTrigger})},
+		cmd.LevelFourThreeCommand: {h.ModifyHandler(h.LevelFourThreeHandler, []int{StateBackable, RemovableByTrigger})},
+		cmd.LevelFourFourCommand:  {h.ModifyHandler(h.LevelFourFourHandler, []int{RemovableByTrigger, RemoveTriggerer})},
 	}
 
 	return h
@@ -25,7 +28,7 @@ func NewLevelFourHandler(gs GlobalStater) *LevelFourHandler {
 func (handler *LevelFourHandler) Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
-	handleFuncs, ok := handler.Handler.commands[command]
+	handleFuncs, ok := handler.GetCommandFromMap(command)
 	if !ok {
 		panic("wrong handler")
 	}
@@ -51,12 +54,12 @@ func (handler *LevelFourHandler) LevelFourStartHandler(params HandlerParams) (Ha
 	response := bottypes.Message{ChatID: chatID, Text: "YOUR FINAL SCENE BEGINS!"}
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "ONE", Command: "/level_four_one"},
+			{ChatID: chatID, Text: "ONE", Command: cmd.LevelFourOneCommand},
 		},
 	})
 
 	res.messages = append(res.messages, response)
-	res.nextCommands = append(res.nextCommands, "/level_four_one")
+	res.nextCommands = append(res.nextCommands, cmd.LevelFourOneCommand)
 	res.nextState = "level-four-state"
 
 	return res, nil
@@ -70,12 +73,12 @@ func (handler *LevelFourHandler) LevelFourOneHandler(params HandlerParams) (Hand
 	response := bottypes.Message{ChatID: chatID, Text: "ONE!"}
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "TWO", Command: "/level_four_two"},
+			{ChatID: chatID, Text: "TWO", Command: cmd.LevelFourTwoCommand},
 		},
 	})
 
 	res.messages = append(res.messages, response)
-	res.nextCommands = append(res.nextCommands, "/level_four_two")
+	res.nextCommands = append(res.nextCommands, cmd.LevelFourTwoCommand)
 
 	return res, nil
 }
@@ -88,12 +91,12 @@ func (handler *LevelFourHandler) LevelFourTwoHandler(params HandlerParams) (Hand
 	response := bottypes.Message{ChatID: chatID, Text: "TWO!"}
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "THREE", Command: "/level_four_three"},
+			{ChatID: chatID, Text: "THREE", Command: cmd.LevelFourThreeCommand},
 		},
 	})
 
 	res.messages = append(res.messages, response)
-	res.nextCommands = append(res.nextCommands, "/level_four_three")
+	res.nextCommands = append(res.nextCommands, cmd.LevelFourThreeCommand)
 
 	return res, nil
 }
@@ -106,12 +109,12 @@ func (handler *LevelFourHandler) LevelFourThreeHandler(params HandlerParams) (Ha
 	response := bottypes.Message{ChatID: chatID, Text: "THREE!"}
 	response.ButtonRows = append(response.ButtonRows, bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "FOUR", Command: "/level_four_four"},
+			{ChatID: chatID, Text: "FOUR", Command: cmd.LevelFourFourCommand},
 		},
 	})
 
 	res.messages = append(res.messages, response)
-	res.nextCommands = append(res.nextCommands, "/level_four_four")
+	res.nextCommands = append(res.nextCommands, cmd.LevelFourFourCommand)
 
 	return res, nil
 }
@@ -121,7 +124,7 @@ func (handler *LevelFourHandler) LevelFourFourHandler(params HandlerParams) (Han
 
 	chatID := params.message.ChatID
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "FOUR!"})
-	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
+	res.postCommandsHandle = append(res.postCommandsHandle, cmd.ShowCommandsCommand)
 	res.nextState = "start-state"
 
 	return res, nil

@@ -30,6 +30,7 @@ type HandlerResponser interface {
 	GetMessages() []bottypes.Message
 	NextState() string
 	ContainsTrigger(bottypes.Trigger) bool
+	GetNextCommands() []bottypes.Command
 }
 
 type CommandHandlerRequester interface {
@@ -142,10 +143,10 @@ func (client *Client) PrepareKeyboard(message bottypes.Message) (tgbotapi.Inline
 		for _, buttonRow := range message.ButtonRows {
 			var buttons []tgbotapi.InlineKeyboardButton
 			for _, button := range buttonRow.Buttons {
-				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command)))
+				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command)))
 			}
 			for _, button := range buttonRow.CheckboxButtons {
-				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command)))
+				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command)))
 			}
 			buttonRows = append(buttonRows, buttons)
 		}
@@ -173,6 +174,13 @@ func (client *Client) SendKeyboard(message bottypes.Message) error {
 	err := client.SetupKeyboard(message, keyboard)
 	if err != nil {
 		return BotError{message: "Send keyboard error: " + err.Error()}
+	}
+
+	client.lastMessage = bottypes.Message{
+		ID:         client.lastMessage.ID,
+		ChatID:     client.lastMessage.ChatID,
+		Text:       message.Text,
+		ButtonRows: message.ButtonRows,
 	}
 
 	return nil
@@ -267,6 +275,32 @@ func (client *Client) removeMessagesByTrigger() error {
 	return nil
 }
 
+func (client *Client) setMyCommands(chatID int64, res []HandlerResponser) error {
+	var commands []tgbotapi.BotCommand
+
+	if len(res) == 0 {
+		_, err := client.api.Request(tgbotapi.NewDeleteMyCommandsWithScope(tgbotapi.NewBotCommandScopeChat(chatID)))
+		return err
+	}
+
+	lastRes := res[len(res)-1]
+	nextCommands := lastRes.GetNextCommands()
+
+	if len(nextCommands) == 0 {
+		_, err := client.api.Request(tgbotapi.NewDeleteMyCommandsWithScope(tgbotapi.NewBotCommandScopeChat(chatID)))
+		return err
+	}
+
+	for _, command := range nextCommands {
+		commands = append(commands, tgbotapi.BotCommand{Command: command.Command, Description: command.Description})
+	}
+
+	_, err := client.api.Request(tgbotapi.NewSetMyCommandsWithScope(
+		tgbotapi.NewBotCommandScopeChat(chatID),
+		commands...))
+	return err
+}
+
 func (client *Client) ListenMessages() {
 
 	u := tgbotapi.NewUpdate(0)
@@ -336,6 +370,11 @@ func (client *Client) ListenMessages() {
 					panic(err)
 				}
 			}
+		}
+
+		err = client.setMyCommands(chatID, handlerResult.GetResponses())
+		if err != nil {
+			panic(err)
 		}
 	}
 }

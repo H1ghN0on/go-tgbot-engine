@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
 )
 
 type CheckboxHandler struct {
@@ -18,14 +19,14 @@ func NewCheckboxHandler(gs GlobalStater) *CheckboxHandler {
 	sh.gs = gs
 
 	sh.commands = map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error){
-		"/checkboxes_start": {sh.SetCheckboxesStartHandler,
+		cmd.CheckboxStartCommand: {sh.SetCheckboxesStartHandler,
 			sh.ModifyHandler(sh.InitCheckboxesHandler, []int{CheckboxableOne, KeyboardStarter, StateBackable})},
-		"/checkboxes_first":  {sh.ModifyHandler(sh.FirstCheckboxHandler, []int{CheckboxableOne, KeyboardStarter, StateBackable})},
-		"/checkboxes_second": {sh.ModifyHandler(sh.SecondCheckboxHandler, []int{CheckboxableOne, KeyboardStarter, StateBackable})},
-		"/checkboxes_third":  {sh.ModifyHandler(sh.ThirdCheckboxHandler, []int{CheckboxableOne, KeyboardStarter, StateBackable})},
-		"/checkboxes_fourth": {sh.ModifyHandler(sh.FourthCheckboxHandler, []int{CheckboxableOne, KeyboardStarter, StateBackable})},
-		"/checkboxes_accept": {sh.ModifyHandler(sh.AcceptCheckboxHandler, []int{KeyboardStopper})},
-		"/nothingness":       {sh.ModifyHandler(sh.EmptyHandler, []int{Nothingness})},
+		cmd.CheckboxFirstCommand:  {sh.ModifyHandler(sh.FirstCheckboxHandler, []int{CheckboxableOne, KeyboardStarter, StateBackable})},
+		cmd.CheckboxSecondCommand: {sh.ModifyHandler(sh.SecondCheckboxHandler, []int{CheckboxableOne, KeyboardStarter, StateBackable})},
+		cmd.CheckboxThirdCommand:  {sh.ModifyHandler(sh.ThirdCheckboxHandler, []int{CheckboxableOne, KeyboardStarter, StateBackable})},
+		cmd.CheckboxFourthCommand: {sh.ModifyHandler(sh.FourthCheckboxHandler, []int{CheckboxableOne, KeyboardStarter, StateBackable})},
+		cmd.CheckboxAcceptCommand: {sh.ModifyHandler(sh.AcceptCheckboxHandler, []int{KeyboardStopper})},
+		cmd.NothingnessCommand:    {sh.ModifyHandler(sh.EmptyHandler, []int{Nothingness})},
 	}
 
 	return sh
@@ -34,7 +35,7 @@ func NewCheckboxHandler(gs GlobalStater) *CheckboxHandler {
 func (handler *CheckboxHandler) Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
-	handleFuncs, ok := handler.Handler.commands[command]
+	handleFuncs, ok := handler.GetCommandFromMap(command)
 	if !ok {
 		panic("wrong handler")
 	}
@@ -161,7 +162,7 @@ func (handler *CheckboxHandler) AcceptCheckboxHandler(params HandlerParams) (Han
 		res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "Fourth"})
 	}
 
-	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
+	res.postCommandsHandle = append(res.postCommandsHandle, cmd.ShowCommandsCommand)
 	res.nextState = "start-state"
 
 	return res, nil
@@ -172,27 +173,27 @@ func (handler *CheckboxHandler) gatherAllCheckboxes(chatID int64) []bottypes.But
 	return []bottypes.ButtonRows{
 		{
 			CheckboxButtons: []bottypes.CheckboxButton{
-				{ChatID: chatID, Text: "Checkbox one", Command: "/checkboxes_first", Active: handler.firstCheckbox},
+				{ChatID: chatID, Text: "Checkbox one", Command: cmd.CheckboxFirstCommand, Active: handler.firstCheckbox},
 			},
 		},
 		{
 			CheckboxButtons: []bottypes.CheckboxButton{
-				{ChatID: chatID, Text: "Checkbox two", Command: "/checkboxes_second", Active: handler.secondCheckbox},
+				{ChatID: chatID, Text: "Checkbox two", Command: cmd.CheckboxSecondCommand, Active: handler.secondCheckbox},
 			},
 		},
 		{
 			CheckboxButtons: []bottypes.CheckboxButton{
-				{ChatID: chatID, Text: "Checkbox three", Command: "/checkboxes_third", Active: handler.thirdCheckbox},
+				{ChatID: chatID, Text: "Checkbox three", Command: cmd.CheckboxThirdCommand, Active: handler.thirdCheckbox},
 			},
 		},
 		{
 			CheckboxButtons: []bottypes.CheckboxButton{
-				{ChatID: chatID, Text: "Checkbox four", Command: "/checkboxes_fourth", Active: handler.fourthCheckbox},
+				{ChatID: chatID, Text: "Checkbox four", Command: cmd.CheckboxFourthCommand, Active: handler.fourthCheckbox},
 			},
 		},
 		{
 			Buttons: []bottypes.Button{
-				{ChatID: chatID, Text: "Accept", Command: "/checkboxes_accept"},
+				{ChatID: chatID, Text: "Accept", Command: cmd.CheckboxAcceptCommand},
 			},
 		},
 	}

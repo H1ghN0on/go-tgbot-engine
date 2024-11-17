@@ -29,14 +29,21 @@ type Message struct {
 
 type Trigger int
 
-type Command string
+type Command struct {
+	Command     string
+	Description string
+}
 
 func (cmd Command) String() string {
-	return string(cmd)
+	return cmd.Command
 }
 
 func (cmd Command) IsCommand() bool {
-	return strings.HasPrefix(string(cmd), "/")
+	return strings.HasPrefix(cmd.Command, "/")
+}
+
+func (cmd Command) Equal(other Command) bool {
+	return cmd.Command == other.Command
 }
 
 const (

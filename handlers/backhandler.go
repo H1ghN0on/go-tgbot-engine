@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
 )
 
 var command_queue_max_size int = 30
@@ -19,15 +20,15 @@ func NewBackHandler(gs GlobalStater, sm StateMachiner) *BackHandler {
 	h.sm = sm
 
 	h.commands = map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error){
-		"/back_state":   {h.ModifyHandler(h.BackStateHandler, []int{RemoveTriggerer, KeyboardStopper})},
-		"/back_command": {h.BackCommandHandler},
+		cmd.BackStateCommand:   {h.ModifyHandler(h.BackStateHandler, []int{RemoveTriggerer, KeyboardStopper})},
+		cmd.BackCommandCommand: {h.BackCommandHandler},
 	}
 
 	return h
 }
 
 func (handler *BackHandler) UpdateLastCommand(command bottypes.Command) {
-	if command != "/back_state" && command != "/back_command" {
+	if !command.Equal(cmd.BackStateCommand) && !command.Equal(cmd.BackCommandCommand) {
 		if len(handler.commandQueue) == 0 || command != handler.commandQueue[len(handler.commandQueue)-1] {
 			if len(handler.commandQueue) > command_queue_max_size {
 				handler.commandQueue = handler.commandQueue[1:]
@@ -44,7 +45,7 @@ func (handler *BackHandler) ClearCommandQueue() {
 func (handler *BackHandler) Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
-	handleFuncs, ok := handler.Handler.commands[command]
+	handleFuncs, ok := handler.GetCommandFromMap(command)
 	if !ok {
 		panic("wrong handler")
 	}
