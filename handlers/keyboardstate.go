@@ -1,6 +1,9 @@
 package handlers
 
-import "github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+import (
+	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
+)
 
 type KeyboardHandler struct {
 	Handler
@@ -12,11 +15,11 @@ func NewKeyboardhandler(gs GlobalStater) *KeyboardHandler {
 	h.gs = gs
 
 	h.commands = map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error){
-		"/keyboard_start":  {h.ModifyHandler(h.KeyboardStartHandler, []int{RemovableByTrigger})},
-		"/keyboard_one":    {h.ModifyHandler(h.KeyboardOneHandler, []int{StateBackable, KeyboardStarter, RemovableByTrigger})},
-		"/keyboard_two":    {h.ModifyHandler(h.KeyboardTwoHandler, []int{CommandBackable, KeyboardStarter, RemovableByTrigger})},
-		"/keyboard_three":  {h.ModifyHandler(h.KeyboardThreeHandler, []int{CommandBackable, RemovableByTrigger, KeyboardStarter})},
-		"/keyboard_finish": {h.ModifyHandler(h.KeyboardFinishHandler, []int{RemoveTriggerer, KeyboardStopper})},
+		cmd.KeyboardStartCommand:  {h.ModifyHandler(h.KeyboardStartHandler, []int{RemovableByTrigger})},
+		cmd.KeyboardOneCommand:    {h.ModifyHandler(h.KeyboardOneHandler, []int{StateBackable, KeyboardStarter, RemovableByTrigger})},
+		cmd.KeyboardTwoCommand:    {h.ModifyHandler(h.KeyboardTwoHandler, []int{CommandBackable, KeyboardStarter, RemovableByTrigger})},
+		cmd.KeyboardThreeCommand:  {h.ModifyHandler(h.KeyboardThreeHandler, []int{CommandBackable, RemovableByTrigger, KeyboardStarter})},
+		cmd.KeyboardFinishCommand: {h.ModifyHandler(h.KeyboardFinishHandler, []int{RemoveTriggerer, KeyboardStopper})},
 	}
 
 	return h
@@ -25,7 +28,7 @@ func NewKeyboardhandler(gs GlobalStater) *KeyboardHandler {
 func (handler *KeyboardHandler) Handle(command bottypes.Command, params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
-	handleFuncs, ok := handler.Handler.commands[command]
+	handleFuncs, ok := handler.GetCommandFromMap(command)
 	if !ok {
 		panic("wrong handler")
 	}
@@ -44,7 +47,7 @@ func (handler *KeyboardHandler) Handle(command bottypes.Command, params HandlerP
 func (handler *KeyboardHandler) KeyboardStartHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	res.postCommandsHandle = append(res.postCommandsHandle, "/keyboard_one")
+	res.postCommandsHandle = append(res.postCommandsHandle, cmd.KeyboardOneCommand)
 	res.nextState = "keyboard-state"
 
 	return res, nil
@@ -58,21 +61,21 @@ func (handler *KeyboardHandler) KeyboardOneHandler(params HandlerParams) (Handle
 
 	buttonRow1 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Let me", Command: "/keyboard_two"},
-			{ChatID: chatID, Text: "No, Let me!", Command: "/keyboard_two"},
+			{ChatID: chatID, Text: "Let me", Command: cmd.KeyboardTwoCommand},
+			{ChatID: chatID, Text: "No, Let me!", Command: cmd.KeyboardTwoCommand},
 		},
 	}
 
 	buttonRow2 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "LET ME!", Command: "/keyboard_two"},
-			{ChatID: chatID, Text: "l-ll-let me *blushes*", Command: "/keyboard_two"},
+			{ChatID: chatID, Text: "LET ME!", Command: cmd.KeyboardTwoCommand},
+			{ChatID: chatID, Text: "l-ll-let me *blushes*", Command: cmd.KeyboardTwoCommand},
 		},
 	}
 
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
 	res.messages = append(res.messages, retMessage)
-	res.nextCommands = append(res.nextCommands, "/keyboard_two")
+	res.nextCommands = append(res.nextCommands, cmd.KeyboardTwoCommand)
 
 	return res, nil
 }
@@ -85,21 +88,21 @@ func (handler *KeyboardHandler) KeyboardTwoHandler(params HandlerParams) (Handle
 
 	buttonRow1 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Push me", Command: "/keyboard_three"},
-			{ChatID: chatID, Text: "No, push me!", Command: "/keyboard_three"},
+			{ChatID: chatID, Text: "Push me", Command: cmd.KeyboardThreeCommand},
+			{ChatID: chatID, Text: "No, push me!", Command: cmd.KeyboardThreeCommand},
 		},
 	}
 
 	buttonRow2 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "PUSH ME!", Command: "/keyboard_three"},
-			{ChatID: chatID, Text: "p-pp-push me *blushes*", Command: "/keyboard_three"},
+			{ChatID: chatID, Text: "PUSH ME!", Command: cmd.KeyboardThreeCommand},
+			{ChatID: chatID, Text: "p-pp-push me *blushes*", Command: cmd.KeyboardThreeCommand},
 		},
 	}
 
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
 	res.messages = append(res.messages, retMessage)
-	res.nextCommands = append(res.nextCommands, "/keyboard_three")
+	res.nextCommands = append(res.nextCommands, cmd.KeyboardThreeCommand)
 
 	return res, nil
 }
@@ -112,22 +115,22 @@ func (handler *KeyboardHandler) KeyboardThreeHandler(params HandlerParams) (Hand
 
 	buttonRow1 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Approach me", Command: "/keyboard_finish"},
-			{ChatID: chatID, Text: "No, approach me!", Command: "/keyboard_finish"},
+			{ChatID: chatID, Text: "Approach me", Command: cmd.KeyboardFinishCommand},
+			{ChatID: chatID, Text: "No, approach me!", Command: cmd.KeyboardFinishCommand},
 		},
 	}
 
 	buttonRow2 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "APPROACH ME!", Command: "/keyboard_finish"},
-			{ChatID: chatID, Text: "a-aa-approach me *blushes*", Command: "/keyboard_finish"},
+			{ChatID: chatID, Text: "APPROACH ME!", Command: cmd.KeyboardFinishCommand},
+			{ChatID: chatID, Text: "a-aa-approach me *blushes*", Command: cmd.KeyboardFinishCommand},
 		},
 	}
 
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2)
 
 	res.messages = append(res.messages, retMessage)
-	res.nextCommands = append(res.nextCommands, "/keyboard_finish")
+	res.nextCommands = append(res.nextCommands, cmd.KeyboardFinishCommand)
 
 	return res, nil
 }
@@ -139,7 +142,7 @@ func (handler *KeyboardHandler) KeyboardFinishHandler(params HandlerParams) (Han
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Alabama certified moment"}
 	res.messages = append(res.messages, retMessage)
 
-	res.postCommandsHandle = append(res.postCommandsHandle, "/show_commands")
+	res.postCommandsHandle = append(res.postCommandsHandle, cmd.ShowCommandsCommand)
 	res.nextState = "start-state"
 
 	return res, nil

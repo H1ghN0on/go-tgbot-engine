@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
 )
 
 const (
@@ -41,6 +42,16 @@ func (handler Handler) GetCommands() []bottypes.Command {
 	}
 
 	return commands
+}
+
+func (handler Handler) GetCommandFromMap(command bottypes.Command) ([]func(HandlerParams) (HandlerResponse, error), bool) {
+	for cmd, funcs := range handler.commands {
+		if cmd.Command == command.Command {
+			return funcs, true
+		}
+	}
+
+	return nil, false
 }
 
 type HandlerParams struct {
@@ -91,7 +102,7 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) (HandlerRes
 			if slices.Contains(modifiers, StateBackable) {
 				response.messages[idx].ButtonRows = append(response.messages[idx].ButtonRows, bottypes.ButtonRows{
 					Buttons: []bottypes.Button{
-						{ChatID: message.ChatID, Text: "Back", Command: "/back_state"},
+						{ChatID: message.ChatID, Text: "Back", Command: cmd.BackStateCommand},
 					},
 				})
 			}
@@ -99,7 +110,7 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) (HandlerRes
 			if slices.Contains(modifiers, CommandBackable) {
 				response.messages[idx].ButtonRows = append(response.messages[idx].ButtonRows, bottypes.ButtonRows{
 					Buttons: []bottypes.Button{
-						{ChatID: message.ChatID, Text: "Back", Command: "/back_command"},
+						{ChatID: message.ChatID, Text: "Back", Command: cmd.BackCommandCommand},
 					},
 				})
 			}
@@ -131,18 +142,18 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) (HandlerRes
 							newCheckboxButton.Text = emptyEmoji
 						}
 						response.messages[idx].ButtonRows[rowIdx].CheckboxButtons = append([]bottypes.CheckboxButton{newCheckboxButton}, response.messages[idx].ButtonRows[rowIdx].CheckboxButtons...)
-						response.messages[idx].ButtonRows[rowIdx].CheckboxButtons[checkboxIdx+1].Command = "/nothingness"
+						response.messages[idx].ButtonRows[rowIdx].CheckboxButtons[checkboxIdx+1].Command = cmd.NothingnessCommand
 					}
 				}
 			}
 		}
 
 		if slices.Contains(modifiers, StateBackable) {
-			response.nextCommands = append(response.nextCommands, "/back_state")
+			response.nextCommands = append(response.nextCommands, cmd.BackStateCommand)
 		}
 
 		if slices.Contains(modifiers, CommandBackable) {
-			response.nextCommands = append(response.nextCommands, "/back_command")
+			response.nextCommands = append(response.nextCommands, cmd.BackCommandCommand)
 		}
 
 		if slices.Contains(modifiers, RemovableByTrigger) {

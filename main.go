@@ -8,6 +8,7 @@ import (
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
 	"github.com/H1ghN0on/go-tgbot-engine/globalstate"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
 	"github.com/H1ghN0on/go-tgbot-engine/statemachine"
 
@@ -20,75 +21,74 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 	startState := statemachine.NewState(
 		"start-state",
 
-		"/show_commands",
+		cmd.ShowCommandsCommand,
 
-		"/level_one",
-		"/level_two",
-		"/level_three",
-		"/show_commands",
-		"/keyboard_start",
-		"/create_error",
-		"/level_four_start",
-		"/big_messages",
-		"/set_info_start",
-		"/checkboxes_start",
+		cmd.LevelOneCommand,
+		cmd.LevelTwoCommand,
+		cmd.LevelThreeCommand,
+		cmd.ShowCommandsCommand,
+		cmd.KeyboardStartCommand,
+		cmd.LevelFourStartCommand,
+		cmd.BigMessagesCommand,
+		cmd.SetInfoStartCommand,
+		cmd.CheckboxStartCommand,
 	)
 
 	levelFourState := statemachine.NewState(
 		"level-four-state",
 
-		"/level_four_start",
+		cmd.LevelFourStartCommand,
 
-		"/level_four_start",
-		"/level_four_one",
-		"/level_four_two",
-		"/level_four_three",
-		"/level_four_four",
-		"/back_state",
+		cmd.LevelFourStartCommand,
+		cmd.LevelFourOneCommand,
+		cmd.LevelFourTwoCommand,
+		cmd.LevelFourThreeCommand,
+		cmd.LevelFourFourCommand,
+		cmd.BackStateCommand,
 	)
 
 	keyboardState := statemachine.NewState(
 		"keyboard-state",
 
-		"/keyboard_start",
+		cmd.KeyboardStartCommand,
 
-		"/keyboard_start",
-		"/keyboard_one",
-		"/keyboard_two",
-		"/keyboard_three",
-		"/keyboard_finish",
-		"/back_state",
-		"/back_command",
+		cmd.KeyboardStartCommand,
+		cmd.KeyboardOneCommand,
+		cmd.KeyboardTwoCommand,
+		cmd.KeyboardThreeCommand,
+		cmd.KeyboardFinishCommand,
+		cmd.BackStateCommand,
+		cmd.BackCommandCommand,
 	)
 
 	infoState := statemachine.NewState(
 		"info-state",
 
-		"/set_info_start",
+		cmd.SetInfoStartCommand,
 
-		"/set_info_start",
-		"/set_name",
-		"/set_surname",
-		"/set_age",
-		"/set_info_end",
-		"/back_state",
-		"/back_command",
-		"*",
+		cmd.SetInfoStartCommand,
+		cmd.SetNameCommand,
+		cmd.SetSurnameCommand,
+		cmd.SetAgeCommand,
+		cmd.SetInfoEndCommand,
+		cmd.BackStateCommand,
+		cmd.BackCommandCommand,
+		cmd.AnyCommand,
 	)
 
 	checkboxState := statemachine.NewState(
 		"checkbox-state",
 
-		"/checkboxes_start",
+		cmd.CheckboxStartCommand,
 
-		"/checkboxes_start",
-		"/checkboxes_first",
-		"/checkboxes_second",
-		"/checkboxes_third",
-		"/checkboxes_fourth",
-		"/checkboxes_accept",
-		"/back_state",
-		"/nothingness",
+		cmd.CheckboxStartCommand,
+		cmd.CheckboxFirstCommand,
+		cmd.CheckboxSecondCommand,
+		cmd.CheckboxThirdCommand,
+		cmd.CheckboxFourthCommand,
+		cmd.CheckboxAcceptCommand,
+		cmd.BackStateCommand,
+		cmd.NothingnessCommand,
 	)
 
 	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState, *startState)

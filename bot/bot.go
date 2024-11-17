@@ -142,10 +142,10 @@ func (client *Client) PrepareKeyboard(message bottypes.Message) (tgbotapi.Inline
 		for _, buttonRow := range message.ButtonRows {
 			var buttons []tgbotapi.InlineKeyboardButton
 			for _, button := range buttonRow.Buttons {
-				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command)))
+				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command)))
 			}
 			for _, button := range buttonRow.CheckboxButtons {
-				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command)))
+				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command)))
 			}
 			buttonRows = append(buttonRows, buttons)
 		}
@@ -292,6 +292,11 @@ func (client *Client) ListenMessages() {
 		if err != nil {
 			client.sendErrorMessage(chatID, fmt.Errorf("bot error: %w", err))
 			continue
+		}
+
+		_, err = client.api.Request(tgbotapi.NewSetMyCommands(tgbotapi.BotCommand{Command: "/show_commands", Description: "Команды"}))
+		if err != nil {
+			panic(err)
 		}
 
 		for _, response := range handlerResult.GetResponses() {

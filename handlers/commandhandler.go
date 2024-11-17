@@ -7,6 +7,8 @@ import (
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
+
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
 )
 
 type Stater interface {
@@ -140,27 +142,31 @@ func (ch *CommandHandler) updateNextCommands(responses []HandlerResponse) {
 	}
 }
 
+func isCommandInSlice(commands []bottypes.Command, command bottypes.Command) bool {
+	return slices.ContainsFunc(commands, func(cmd bottypes.Command) bool { return command.Command == cmd.Command })
+}
+
 func (ch *CommandHandler) checkCommandInState(command bottypes.Command) bool {
-	return slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), command) ||
-		(slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), "*") && !command.IsCommand())
+	return isCommandInSlice(ch.sm.GetActiveState().GetAvailableCommands(), command) ||
+		(isCommandInSlice(ch.sm.GetActiveState().GetAvailableCommands(), cmd.AnyCommand) && !command.IsCommand())
 }
 
 func (ch *CommandHandler) checkCommandInNextCommands(command bottypes.Command) bool {
-	return len(ch.nextCommands) == 0 || slices.Contains(ch.nextCommands, command) ||
-		(slices.Contains(ch.nextCommands, "*") && !command.IsCommand())
+	return len(ch.nextCommands) == 0 || isCommandInSlice(ch.nextCommands, command) ||
+		(isCommandInSlice(ch.nextCommands, cmd.AnyCommand) && !command.IsCommand())
 }
 
 func (ch *CommandHandler) checkCommandInHandler(command bottypes.Command, handler Handlerable) bool {
 	commandsToCheck := handler.GetCommands()
-	return slices.Contains(commandsToCheck, command) ||
-		(slices.Contains(commandsToCheck, "*") && !command.IsCommand())
+	return isCommandInSlice(commandsToCheck, command) ||
+		(isCommandInSlice(commandsToCheck, cmd.AnyCommand) && !command.IsCommand())
 }
 
 func (ch *CommandHandler) hasCommandInHandler(commands []bottypes.Command, handler Handlerable) bool {
 
 	commandsToCheck := handler.GetCommands()
 	for _, command := range commands {
-		if slices.Contains(commandsToCheck, command) || (slices.Contains(commandsToCheck, "*") && !command.IsCommand()) {
+		if isCommandInSlice(commandsToCheck, command) || (isCommandInSlice(commandsToCheck, cmd.AnyCommand) && !command.IsCommand()) {
 			return true
 		}
 	}
@@ -193,7 +199,7 @@ func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessag
 	for _, handler := range ch.handlers {
 		commandToCheck := command
 		if !command.IsCommand() && ch.hasCommandInHandler(ch.nextCommands, handler) {
-			commandToCheck = "*"
+			commandToCheck = cmd.AnyCommand
 		}
 
 		if ch.checkCommandInHandler(commandToCheck, handler) {
@@ -241,7 +247,7 @@ func (ch *CommandHandler) handleCommand(command bottypes.Command, receivedMessag
 func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHandlerResponser, error) {
 
 	receivedMessage := req.GetMessage()
-	command := bottypes.Command(receivedMessage.Text)
+	command := bottypes.Command{Command: receivedMessage.Text}
 
 	if !ch.checkCommandInNextCommands(command) {
 		logger.CommandHandler().Critical(command.String(), "is not in next commands (", convertCommandsToString(ch.nextCommands), ")")
