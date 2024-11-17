@@ -49,3 +49,4 @@ var LevelFourFourCommand bottypes.Command = bottypes.Command{Command: "/level_fo
 var DynamicKeyboardStartCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_start", Description: "Запуск динамической клавиатуры"}
 var DynamicKeyboardFirstStageCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_first_stage", Description: "Первая фаза динамической клавиатуры"}
 var DynamicKeyboardSecondStageCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_second_stage", Description: "Вторая фаза динамической клавиатуры"}
+var DynamicKeyboardFinishCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_finish", Description: "Завершение динамической клавиатуры"}

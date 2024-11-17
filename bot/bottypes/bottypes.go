@@ -53,6 +53,11 @@ func (cmd Command) Equal(other Command) bool {
 	return cmd.Command == other.Command
 }
 
+type ParseableCommand struct {
+	Command    Command
+	Exceptions []Command
+}
+
 const (
 	RemoveTrigger          Trigger = iota
 	AddToNextRemoveTrigger Trigger = iota

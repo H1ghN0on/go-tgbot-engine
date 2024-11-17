@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
@@ -20,10 +21,11 @@ func (err BotError) Error() string {
 }
 
 type Client struct {
-	cmdhandler       CommandHandler
-	api              *tgbotapi.BotAPI
-	lastMessage      bottypes.Message
-	messagesToRemove []bottypes.Message
+	cmdhandler         CommandHandler
+	api                *tgbotapi.BotAPI
+	lastMessage        bottypes.Message
+	messagesToRemove   []bottypes.Message
+	nextCommandToParse bottypes.ParseableCommand
 }
 
 type HandlerResponser interface {
@@ -31,6 +33,7 @@ type HandlerResponser interface {
 	NextState() string
 	ContainsTrigger(bottypes.Trigger) bool
 	GetNextCommands() []bottypes.Command
+	GetNextCommandToParse() bottypes.ParseableCommand
 }
 
 type CommandHandlerRequester interface {
@@ -54,16 +57,18 @@ func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.ParsedMessa
 
 		chatID = update.Message.Chat.ID
 
+		command, err := client.parseCommand(update.Message.Text)
+		if err != nil {
+			panic(err)
+		}
+
 		receivedMessage = bottypes.ParsedMessage{
 			Info: bottypes.Message{
 				ID:     update.Message.MessageID,
 				ChatID: chatID,
 				Text:   update.Message.Text,
 			},
-			Command: bottypes.Command{
-				Command: update.Message.Text,
-				Data:    "",
-			},
+			Command: command,
 		}
 	} else if update.CallbackQuery != nil {
 
@@ -74,16 +79,19 @@ func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.ParsedMessa
 			return bottypes.ParsedMessage{}, chatID, BotError{message: "callback request failed"}
 		}
 
+		command, err := client.parseCommand(update.CallbackQuery.Data)
+		if err != nil {
+			panic(err)
+		}
+
 		receivedMessage = bottypes.ParsedMessage{
 			Info: bottypes.Message{
 				ID:     update.CallbackQuery.Message.MessageID,
 				ChatID: chatID,
 				Text:   update.CallbackQuery.Data,
 			},
-			Command: bottypes.Command{
-				Command: update.CallbackQuery.Data,
-				Data:    "",
-			}}
+			Command: command,
+		}
 
 	} else if update.EditedMessage != nil {
 		chatID = update.EditedMessage.Chat.ID
@@ -93,6 +101,34 @@ func (client *Client) parseMessage(update tgbotapi.Update) (bottypes.ParsedMessa
 	}
 
 	return receivedMessage, chatID, nil
+}
+
+func (client Client) parseCommand(text string) (bottypes.Command, error) {
+	command := bottypes.Command{
+		Command: text,
+		Data:    "",
+	}
+
+	commandToParse := client.nextCommandToParse.Command
+
+	if client.nextCommandToParse.Command.Command != "" {
+
+		for _, exception := range client.nextCommandToParse.Exceptions {
+			if exception.Command == text {
+				return command, nil
+			}
+		}
+
+		if !strings.HasPrefix(text, commandToParse.Command) {
+			return bottypes.Command{}, fmt.Errorf("no prefix")
+		}
+
+		data, _ := strings.CutPrefix(text, commandToParse.Command)
+		command.Command = commandToParse.Command
+		command.Data = data
+	}
+
+	return command, nil
 }
 
 func (client Client) compareMessages(a bottypes.Message) func(bottypes.Message) bool {
@@ -154,12 +190,7 @@ func (client *Client) PrepareKeyboard(message bottypes.Message) (tgbotapi.Inline
 		for _, buttonRow := range message.ButtonRows {
 			var buttons []tgbotapi.InlineKeyboardButton
 			for _, button := range buttonRow.Buttons {
-				if button.Data != "" {
-					buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command+"_"+button.Data)))
-				} else {
-					buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command)))
-				}
-
+				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command+button.Data)))
 			}
 			for _, button := range buttonRow.CheckboxButtons {
 				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command)))
@@ -317,6 +348,15 @@ func (client *Client) setMyCommands(chatID int64, res []HandlerResponser) error 
 	return err
 }
 
+func (client *Client) setNextCommandToParse(command bottypes.ParseableCommand) {
+	if command.Command.Command == "" {
+		client.nextCommandToParse = bottypes.ParseableCommand{}
+	} else {
+		logger.Bot().Info("command", command.Command.Command, "will be parsed")
+		client.nextCommandToParse = command
+	}
+}
+
 func (client *Client) ListenMessages() {
 
 	u := tgbotapi.NewUpdate(0)
@@ -386,6 +426,8 @@ func (client *Client) ListenMessages() {
 					panic(err)
 				}
 			}
+
+			client.setNextCommandToParse(response.GetNextCommandToParse())
 		}
 
 		err = client.setMyCommands(chatID, handlerResult.GetResponses())

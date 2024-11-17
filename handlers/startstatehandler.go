@@ -111,6 +111,7 @@ func (handler *StartHandler) ShowCommandsHandler(params HandlerParams) (HandlerR
 	buttonRow5 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
 			{ChatID: chatID, Text: "Keyboard", Command: cmd.KeyboardStartCommand},
+			{ChatID: chatID, Text: "Dynamic Keyboard", Command: cmd.DynamicKeyboardStartCommand},
 		},
 	}
 

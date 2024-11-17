@@ -279,6 +279,7 @@ func NewCommandHandler(sm StateMachiner, gs GlobalStater) *CommandHandler {
 	levelFourHandler := NewLevelFourHandler(gs)
 	startHandler := NewStartHandler(gs)
 	checkboxHandler := NewCheckboxHandler(gs)
+	dynamicKeyboardHandler := NewDynamicKeyboardhandler(gs)
 	backHandler := NewBackHandler(gs, sm)
 
 	ch.handlers = append(ch.handlers,
@@ -287,6 +288,7 @@ func NewCommandHandler(sm StateMachiner, gs GlobalStater) *CommandHandler {
 		levelFourHandler,
 		startHandler,
 		checkboxHandler,
+		dynamicKeyboardHandler,
 		backHandler)
 
 	ch.backHandler = backHandler

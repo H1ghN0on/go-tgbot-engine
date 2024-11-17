@@ -32,6 +32,7 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 		cmd.BigMessagesCommand,
 		cmd.SetInfoStartCommand,
 		cmd.CheckboxStartCommand,
+		cmd.DynamicKeyboardStartCommand,
 	)
 
 	levelFourState := statemachine.NewState(
@@ -96,7 +97,11 @@ func configurateStateMachine(sm *statemachine.StateMachine) {
 
 		cmd.DynamicKeyboardStartCommand,
 
-		cmd.DynamicKeyboardStartCommand,
+		cmd.DynamicKeyboardFirstStageCommand,
+		cmd.DynamicKeyboardSecondStageCommand,
+		cmd.DynamicKeyboardFinishCommand,
+		cmd.BackStateCommand,
+		cmd.BackCommandCommand,
 	)
 
 	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState, *startState, *dynamicKeyboardState)

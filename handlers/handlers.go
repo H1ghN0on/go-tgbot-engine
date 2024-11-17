@@ -65,6 +65,7 @@ type HandlerResponse struct {
 	nextState          string
 	postCommandsHandle []bottypes.Command
 	nextCommands       []bottypes.Command
+	nextCommandToParse bottypes.ParseableCommand
 }
 
 func (hr HandlerResponse) GetMessages() []bottypes.Message {
@@ -81,6 +82,10 @@ func (hr HandlerResponse) ContainsTrigger(trigger bottypes.Trigger) bool {
 
 func (hr HandlerResponse) GetNextCommands() []bottypes.Command {
 	return hr.nextCommands
+}
+
+func (hr HandlerResponse) GetNextCommandToParse() bottypes.ParseableCommand {
+	return hr.nextCommandToParse
 }
 
 func NewHandler(gs GlobalStater) *Handler {
@@ -155,10 +160,12 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) (HandlerRes
 
 		if slices.Contains(modifiers, StateBackable) {
 			response.nextCommands = append(response.nextCommands, cmd.BackStateCommand)
+			response.nextCommandToParse.Exceptions = append(response.nextCommandToParse.Exceptions, cmd.BackStateCommand)
 		}
 
 		if slices.Contains(modifiers, CommandBackable) {
 			response.nextCommands = append(response.nextCommands, cmd.BackCommandCommand)
+			response.nextCommandToParse.Exceptions = append(response.nextCommandToParse.Exceptions, cmd.BackCommandCommand)
 		}
 
 		if slices.Contains(modifiers, RemovableByTrigger) {
