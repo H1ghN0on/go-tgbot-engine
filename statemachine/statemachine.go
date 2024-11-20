@@ -52,11 +52,7 @@ func (state State) GetAvailableStates() []handlers.Stater {
 
 func (state *State) SetAvailableStates(newStates ...handlers.Stater) {
 	for _, newState := range newStates {
-		if newState, ok := newState.(State); ok {
-			state.availableStates = append(state.availableStates, newState)
-		}	else{
-			panic("Statemachine|SetAvailableStates|\nerror: Object is not type State")
-		}
+		state.availableStates = append(state.availableStates, newState.(State))
 	}
 }
 
