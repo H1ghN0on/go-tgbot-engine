@@ -3,9 +3,11 @@ package bot
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/client"
+	"github.com/H1ghN0on/go-tgbot-engine/bot/notificator"
 	"github.com/H1ghN0on/go-tgbot-engine/globalstate"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
@@ -22,10 +24,24 @@ func (err BotError) Error() string {
 	return err.message
 }
 
+type Notificationer interface {
+	GetMessages() []bottypes.Message
+	GetUsers() []bottypes.User
+	GetTimeoutSec() int
+}
+
+type Notificator interface {
+	// SetTimeout(timeoutSec int)
+	Start()
+	Stop()
+}
+
 type Bot struct {
-	api     *tgbotapi.BotAPI
-	clients map[int64]*client.Client
-	gs      *globalstate.GlobalState
+	api                *tgbotapi.BotAPI
+	clients            map[int64]*client.Client
+	gs                 *globalstate.GlobalState
+	staticNotificator  Notificator
+	dynamicNotificator Notificator
 }
 
 func (client *Bot) parseMessage(update tgbotapi.Update) (bottypes.Message, int64, error) {
@@ -72,6 +88,8 @@ func (bot *Bot) ListenMessages() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	updates := bot.api.GetUpdatesChan(u)
+	bot.staticNotificator.Start()
+	bot.dynamicNotificator.Start()
 
 	logger.Bot().Info("listening messsages")
 
@@ -95,12 +113,68 @@ func (bot *Bot) ListenMessages() {
 			logger.Bot().Info("adding new client with id", string(receivedMessage.ChatID))
 			sm := statemachine.NewStateMachine()
 			ch := handlers.NewCommandHandler(sm, bot.gs)
-			activeClient = client.NewClient(bot.api, ch)
+			activeClient = client.NewClient(bot.api, ch, receivedMessage.ChatID)
 			bot.clients[receivedMessage.ChatID] = activeClient
 		}
 
 		activeClient.HandleNewMessage(receivedMessage)
 	}
+}
+
+func (bot *Bot) notificationHandler(notification notificator.Notificationer) {
+	logger.Bot().Info("Static notification timeout")
+
+	if len(notification.GetMessages()) == 0 {
+		return
+	}
+
+	if len(notification.GetUsers()) != 0 {
+		for _, user := range notification.GetUsers() {
+			for _, message := range notification.GetMessages() {
+				msg := tgbotapi.NewMessage(user.UserID, message.Text)
+				bot.api.Send(msg)
+			}
+		}
+	} else {
+		for _, client := range bot.clients {
+			for _, message := range notification.GetMessages() {
+				client.SendMessage(message)
+			}
+		}
+	}
+}
+
+func (bot *Bot) getDynamicMessages() []bottypes.Message {
+	var messages []bottypes.Message
+
+	t := time.Now().Format(time.RFC850)
+	messages = append(messages, bottypes.Message{
+		Text: t,
+	})
+
+	return messages
+}
+
+func (bot *Bot) getDynamicMessages2() []bottypes.Message {
+	var messages []bottypes.Message
+
+	messages = append(messages, bottypes.Message{
+		Text: "Children of dynamic messages",
+	})
+
+	return messages
+}
+
+func (bot *Bot) notificateOnlyMe() []bottypes.User {
+	var users []bottypes.User
+	users = append(users, bottypes.User{
+		UserID: 872451555,
+	})
+	return users
+}
+
+func (bot *Bot) notificateAllConnectedUsers() []bottypes.User {
+	return []bottypes.User{}
 }
 
 func NewBot(api *tgbotapi.BotAPI, gs *globalstate.GlobalState) *Bot {
@@ -110,5 +184,14 @@ func NewBot(api *tgbotapi.BotAPI, gs *globalstate.GlobalState) *Bot {
 	}
 
 	bot.clients = make(map[int64]*client.Client)
+
+	notification := notificator.NewStaticNotification([]bottypes.Message{{Text: "Ravevenge"}}, bot.notificateOnlyMe, 5)
+	notification2 := notificator.NewStaticNotification([]bottypes.Message{{Text: "Crypteque"}}, bot.notificateAllConnectedUsers, 10)
+	bot.staticNotificator = notificator.NewStaticNotificator([]notificator.StaticNotification{*notification, *notification2}, bot.notificationHandler)
+
+	dynamicNotification := notificator.NewDynamicNotification(bot.getDynamicMessages, bot.notificateOnlyMe, 5)
+	dynamicNotification2 := notificator.NewDynamicNotification(bot.getDynamicMessages2, bot.notificateAllConnectedUsers, 10)
+	bot.dynamicNotificator = notificator.NewDynamicNotificator([]notificator.DynamicNotification{*dynamicNotification, *dynamicNotification2}, bot.notificationHandler)
+
 	return bot
 }

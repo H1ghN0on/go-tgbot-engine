@@ -7,6 +7,10 @@ import (
 
 type ParseCommandType int
 
+type User struct {
+	UserID int64
+}
+
 const (
 	AnyTextParse       ParseCommandType = iota
 	DynamicButtonParse ParseCommandType = iota
