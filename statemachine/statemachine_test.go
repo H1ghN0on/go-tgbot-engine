@@ -3,6 +3,7 @@ package statemachine
 import (
 	"testing"
 
+	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,12 +22,12 @@ func TestState_GetStartCommand(t *testing.T) {
 
 	state := State{
 		name:              "Init",
-		startCommand:      "start",
-		availableCommands: []string{"run", "stop"},
+		startCommand:      bottypes.Command{Command: "start"},
+		availableCommands: []bottypes.Command{{Command: "run"}, {Command: "stop"}},
 		availableStates:   []State{},
 	}
 
-	expectedCommand := "start"
+	expectedCommand := bottypes.Command{Command: "start"}
 
 	assert.Equal(t, expectedCommand, state.GetStartCommand(),
 		"GetStartCommand(): got %q, want %q",
@@ -44,10 +45,10 @@ func TestState_GetName(t *testing.T) {
 
 func TestState_GetAvailableCommands(t *testing.T) {
 	state := State{
-		availableCommands: []string{"run", "stop"},
+		availableCommands: []bottypes.Command{{Command: "run"}, {Command: "stop"}},
 	}
 
-	expectedCommands := []string{"run", "stop"}
+	expectedCommands := []bottypes.Command{{Command: "run"}, {Command: "stop"}}
 
 	assert.Len(t, state.availableCommands, len(expectedCommands),
 		"GetAvailableCommands(): len state.AvailableCommands = %d; expected %d",
@@ -87,13 +88,13 @@ func TestState_SetAvailableStates(t *testing.T) {
 
 func TestState_NewState(t *testing.T) {
 	receivedName := "Name"
-	receivedStartCommand := "Run"
-	receivedAvailableCommands := []string{"Run", "Stop"}
+	receivedStartCommand := bottypes.Command{Command: "Run"}
+	receivedAvailableCommands := []bottypes.Command{{Command: "Run"}, {Command: "Stop"}}
 
 	expectedState := &State{
 		name:              "Name",
-		startCommand:      "Run",
-		availableCommands: []string{"Run", "Stop"},
+		startCommand:      bottypes.Command{Command: "Run"},
+		availableCommands: []bottypes.Command{{Command: "Run"}, {Command: "Stop"}},
 	}
 
 	testState := NewState(receivedName, receivedStartCommand, receivedAvailableCommands...)
