@@ -49,6 +49,10 @@ type Client struct {
 	nextCommandToParse bottypes.ParseableCommand
 }
 
+func (client Client) GetUserID() int64 {
+	return client.chatID
+}
+
 func (client Client) parseCommand(message bottypes.Message) bottypes.Command {
 	command := bottypes.Command{
 		Command: message.Text,

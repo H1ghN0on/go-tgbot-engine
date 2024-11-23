@@ -3,7 +3,6 @@ package bot
 import (
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/client"
@@ -122,59 +121,18 @@ func (bot *Bot) ListenMessages() {
 }
 
 func (bot *Bot) notificationHandler(notification notificator.Notificationer) {
-	logger.Bot().Info("Static notification timeout")
+	logger.Bot().Info("Notification timeout")
 
 	if len(notification.GetMessages()) == 0 {
 		return
 	}
 
-	if len(notification.GetUsers()) != 0 {
-		for _, user := range notification.GetUsers() {
-			for _, message := range notification.GetMessages() {
-				msg := tgbotapi.NewMessage(user.UserID, message.Text)
-				bot.api.Send(msg)
-			}
-		}
-	} else {
-		for _, client := range bot.clients {
-			for _, message := range notification.GetMessages() {
-				client.SendMessage(message)
-			}
+	for _, user := range notification.GetUsers() {
+		for _, message := range notification.GetMessages() {
+			message := tgbotapi.NewMessage(user.UserID, message.Text)
+			bot.api.Send(message)
 		}
 	}
-}
-
-func (bot *Bot) getDynamicMessages() []bottypes.Message {
-	var messages []bottypes.Message
-
-	t := time.Now().Format(time.RFC850)
-	messages = append(messages, bottypes.Message{
-		Text: t,
-	})
-
-	return messages
-}
-
-func (bot *Bot) getDynamicMessages2() []bottypes.Message {
-	var messages []bottypes.Message
-
-	messages = append(messages, bottypes.Message{
-		Text: "Children of dynamic messages",
-	})
-
-	return messages
-}
-
-func (bot *Bot) notificateOnlyMe() []bottypes.User {
-	var users []bottypes.User
-	users = append(users, bottypes.User{
-		UserID: 872451555,
-	})
-	return users
-}
-
-func (bot *Bot) notificateAllConnectedUsers() []bottypes.User {
-	return []bottypes.User{}
 }
 
 func NewBot(api *tgbotapi.BotAPI, gs *globalstate.GlobalState) *Bot {
@@ -185,12 +143,12 @@ func NewBot(api *tgbotapi.BotAPI, gs *globalstate.GlobalState) *Bot {
 
 	bot.clients = make(map[int64]*client.Client)
 
-	notification := notificator.NewStaticNotification([]bottypes.Message{{Text: "Ravevenge"}}, bot.notificateOnlyMe, 5)
-	notification2 := notificator.NewStaticNotification([]bottypes.Message{{Text: "Crypteque"}}, bot.notificateAllConnectedUsers, 10)
+	notification := notificator.NewStaticNotification([]bottypes.Message{{Text: "Ravevenge"}}, bot.OnlyMe, 5)
+	notification2 := notificator.NewStaticNotification([]bottypes.Message{{Text: "Crypteque"}}, bot.AllConnectedUsers, 10)
 	bot.staticNotificator = notificator.NewStaticNotificator([]notificator.StaticNotification{*notification, *notification2}, bot.notificationHandler)
 
-	dynamicNotification := notificator.NewDynamicNotification(bot.getDynamicMessages, bot.notificateOnlyMe, 5)
-	dynamicNotification2 := notificator.NewDynamicNotification(bot.getDynamicMessages2, bot.notificateAllConnectedUsers, 10)
+	dynamicNotification := notificator.NewDynamicNotification(bot.TimeNotification, bot.OnlyMe, 5)
+	dynamicNotification2 := notificator.NewDynamicNotification(bot.RandomNumberNotification, bot.AllConnectedUsers, 10)
 	bot.dynamicNotificator = notificator.NewDynamicNotificator([]notificator.DynamicNotification{*dynamicNotification, *dynamicNotification2}, bot.notificationHandler)
 
 	return bot
