@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
 )
 
 const (
@@ -20,11 +21,23 @@ const (
 
 type Handler struct {
 	gs       GlobalStater
-	commands map[string][]func(params HandlerParams) HandlerResponse
+	commands map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error)
 }
 
-func (handler Handler) GetCommands() []string {
-	commands := make([]string, len(handler.commands))
+func (handler *Handler) HandleBackCommand(params HandlerParams) ([]HandlerResponse, error) {
+	return []HandlerResponse{}, nil
+}
+
+type HandlerResponseError struct {
+	message string
+}
+
+func (res HandlerResponseError) Error() string {
+	return res.message
+}
+
+func (handler Handler) GetCommands() []bottypes.Command {
+	commands := make([]bottypes.Command, len(handler.commands))
 
 	i := 0
 	for k := range handler.commands {
@@ -35,20 +48,33 @@ func (handler Handler) GetCommands() []string {
 	return commands
 }
 
-type SequentHandler struct {
-	Handler
-	commandSequence map[int]string
-	active          int
+func (handler Handler) GetCommandFromMap(command bottypes.Command) ([]func(HandlerParams) (HandlerResponse, error), bool) {
+	for cmd, funcs := range handler.commands {
+		if cmd.Command == command.Command {
+			return funcs, true
+		}
+	}
+
+	return nil, false
 }
 
 type HandlerParams struct {
-	message bottypes.Message
+	command bottypes.Command
+	message bottypes.ParsedMessage
 }
 
 type HandlerResponse struct {
-	messages  []bottypes.Message
-	nextState string
-	triggers  []bottypes.Trigger
+	messages           []bottypes.Message
+	triggers           []bottypes.Trigger
+	nextState          string
+	postCommandsHandle PostCommands
+	nextCommands       []bottypes.Command
+	nextCommandToParse bottypes.ParseableCommand
+}
+
+type PostCommands struct {
+	commands      []bottypes.Command
+	isBackCommand bool
 }
 
 func (hr HandlerResponse) GetMessages() []bottypes.Message {
@@ -63,27 +89,39 @@ func (hr HandlerResponse) ContainsTrigger(trigger bottypes.Trigger) bool {
 	return slices.Contains(hr.triggers, trigger)
 }
 
+func (hr HandlerResponse) GetNextCommands() []bottypes.Command {
+	return hr.nextCommands
+}
+
+func (hr HandlerResponse) GetNextCommandToParse() bottypes.ParseableCommand {
+	return hr.nextCommandToParse
+}
+
 func NewHandler(gs GlobalStater) *Handler {
 	return &Handler{
 		gs: gs,
 	}
 }
 
-func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResponse, modifiers []int) func(HandlerParams) HandlerResponse {
-	return func(params HandlerParams) HandlerResponse {
+func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) (HandlerResponse, error), modifiers []int) func(HandlerParams) (HandlerResponse, error) {
+	return func(params HandlerParams) (HandlerResponse, error) {
 		if slices.Contains(modifiers, Nothingness) {
 			return HandlerResponse{
 				triggers: []bottypes.Trigger{bottypes.NothingTrigger},
-			}
+			}, nil
 		}
 
-		response := handlerFoo(params)
+		response, err := handlerFoo(params)
+		if err != nil {
+			return HandlerResponse{}, err
+		}
+
 		for idx, message := range response.messages {
 
 			if slices.Contains(modifiers, StateBackable) {
 				response.messages[idx].ButtonRows = append(response.messages[idx].ButtonRows, bottypes.ButtonRows{
 					Buttons: []bottypes.Button{
-						{ChatID: message.ChatID, Text: "Back", Command: bottypes.Command{Text: "/back_state"}},
+						{ChatID: message.ChatID, Text: "Back", Command: cmd.BackStateCommand},
 					},
 				})
 			}
@@ -91,7 +129,7 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResp
 			if slices.Contains(modifiers, CommandBackable) {
 				response.messages[idx].ButtonRows = append(response.messages[idx].ButtonRows, bottypes.ButtonRows{
 					Buttons: []bottypes.Button{
-						{ChatID: message.ChatID, Text: "Back", Command: bottypes.Command{Text: "/back_command"}},
+						{ChatID: message.ChatID, Text: "Back", Command: cmd.BackCommandCommand},
 					},
 				})
 			}
@@ -123,10 +161,20 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResp
 							newCheckboxButton.Text = emptyEmoji
 						}
 						response.messages[idx].ButtonRows[rowIdx].CheckboxButtons = append([]bottypes.CheckboxButton{newCheckboxButton}, response.messages[idx].ButtonRows[rowIdx].CheckboxButtons...)
-						response.messages[idx].ButtonRows[rowIdx].CheckboxButtons[checkboxIdx+1].Command.Text = "/nothingness"
+						response.messages[idx].ButtonRows[rowIdx].CheckboxButtons[checkboxIdx+1].Command = cmd.NothingnessCommand
 					}
 				}
 			}
+		}
+
+		if slices.Contains(modifiers, StateBackable) {
+			response.nextCommands = append(response.nextCommands, cmd.BackStateCommand)
+			response.nextCommandToParse.Exceptions = append(response.nextCommandToParse.Exceptions, cmd.BackStateCommand)
+		}
+
+		if slices.Contains(modifiers, CommandBackable) {
+			response.nextCommands = append(response.nextCommands, cmd.BackCommandCommand)
+			response.nextCommandToParse.Exceptions = append(response.nextCommandToParse.Exceptions, cmd.BackCommandCommand)
 		}
 
 		if slices.Contains(modifiers, RemovableByTrigger) {
@@ -145,10 +193,10 @@ func (handler *Handler) ModifyHandler(handlerFoo func(HandlerParams) HandlerResp
 			response.triggers = append(response.triggers, bottypes.RemoveTrigger)
 		}
 
-		return response
+		return response, nil
 	}
 }
 
-func (handler *Handler) EmptyHandler(params HandlerParams) HandlerResponse {
-	return HandlerResponse{}
+func (handler *Handler) EmptyHandler(params HandlerParams) (HandlerResponse, error) {
+	return HandlerResponse{}, nil
 }

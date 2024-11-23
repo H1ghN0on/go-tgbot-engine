@@ -1,6 +1,9 @@
 package handlers
 
-import "github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+import (
+	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
+)
 
 type StartHandler struct {
 	Handler
@@ -11,71 +14,66 @@ func NewStartHandler(gs GlobalStater) *StartHandler {
 	h := &StartHandler{}
 	h.gs = gs
 
-	h.commands = map[string][]func(params HandlerParams) HandlerResponse{
-		"/show_commands": {h.ShowCommandsHandler},
-		"/level_one":     {h.LevelOneHandler},
-		"/level_two":     {h.LevelTwoHandler},
-		"/level_three":   {h.LevelThreeHandler},
-		"/big_messages":  {h.BigMessagesHandler},
+	h.commands = map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error){
+		cmd.ShowCommandsCommand: {h.ShowCommandsHandler},
+		cmd.LevelOneCommand:     {h.LevelOneHandler},
+		cmd.LevelTwoCommand:     {h.LevelTwoHandler},
+		cmd.LevelThreeCommand:   {h.LevelThreeHandler},
+		cmd.BigMessagesCommand:  {h.BigMessagesHandler},
 	}
 
 	return h
 }
 
-func (handler *StartHandler) InitHandler() {
-
-}
-
-func (handler *StartHandler) Handle(command string, params HandlerParams) ([]HandlerResponse, bool) {
+func (handler *StartHandler) Handle(params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
-	handleFuncs, ok := handler.Handler.commands[command]
+	handleFuncs, ok := handler.GetCommandFromMap(params.command)
 	if !ok {
 		panic("wrong handler")
 	}
 
 	for _, handleFunc := range handleFuncs {
-		response := handleFunc(params)
+		response, err := handleFunc(params)
+		if err != nil {
+			return []HandlerResponse{}, err
+		}
 		res = append(res, response)
 	}
 
-	return res, true
+	return res, nil
 }
 
-func (handler *StartHandler) DeinitHandler() {
-
-}
-
-func (handler *Handler) LevelOneHandler(params HandlerParams) HandlerResponse {
+func (handler *StartHandler) LevelOneHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "YOUR FINAL SIGHT!"})
-
-	return HandlerResponse{messages: res.messages, nextState: "start-state"}
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.ShowCommandsCommand)
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }
 
-func (handler *Handler) LevelTwoHandler(params HandlerParams) HandlerResponse {
+func (handler *StartHandler) LevelTwoHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "SEE AS I SEE!"})
-
-	return HandlerResponse{messages: res.messages, nextState: "start-state"}
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.ShowCommandsCommand)
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }
 
-func (handler *Handler) LevelThreeHandler(params HandlerParams) HandlerResponse {
+func (handler *StartHandler) LevelThreeHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "FEEL WITH ME!"})
-
-	return HandlerResponse{messages: res.messages, nextState: "start-state"}
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.ShowCommandsCommand)
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }
 
-func (handler *Handler) ShowCommandsHandler(params HandlerParams) HandlerResponse {
+func (handler *StartHandler) ShowCommandsHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 
 	if handler.gs.GetName() != "" && handler.gs.GetSurname() != "" {
 		retMessage := bottypes.Message{ChatID: chatID, Text: "Hello, " + handler.gs.GetName() + " " + handler.gs.GetSurname() + "!"}
@@ -86,60 +84,62 @@ func (handler *Handler) ShowCommandsHandler(params HandlerParams) HandlerRespons
 
 	buttonRow1 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Level 1", Command: bottypes.Command{Text: "/level_one"}},
-			{ChatID: chatID, Text: "Level 2", Command: bottypes.Command{Text: "/level_two"}},
+			{ChatID: chatID, Text: "Level 1", Command: cmd.LevelOneCommand},
+			{ChatID: chatID, Text: "Level 2", Command: cmd.LevelTwoCommand},
 		},
 	}
 
 	buttonRow2 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Level 3", Command: bottypes.Command{Text: "/level_three"}},
-			{ChatID: chatID, Text: "Create error", Command: bottypes.Command{Text: "/create_error"}},
+			{ChatID: chatID, Text: "Level 3", Command: cmd.LevelThreeCommand},
+			// {ChatID: chatID, Text: "Create error", Command: "/create_error"},
 		},
 	}
 
 	buttonRow3 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Curtain Call", Command: bottypes.Command{Text: "/level_four_start"}},
+			{ChatID: chatID, Text: "Curtain Call", Command: cmd.LevelFourStartCommand},
 		},
 	}
 
 	buttonRow4 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Big messages", Command: bottypes.Command{Text: "/big_messages"}},
+			{ChatID: chatID, Text: "Big messages", Command: cmd.BigMessagesCommand},
 		},
 	}
 
 	buttonRow5 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Keyboard", Command: bottypes.Command{Text: "/keyboard_start"}},
+			{ChatID: chatID, Text: "Keyboard", Command: cmd.KeyboardStartCommand},
+			{ChatID: chatID, Text: "Dynamic Keyboard", Command: cmd.DynamicKeyboardStartCommand},
 		},
 	}
 
 	buttonRow6 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Set Info", Command: bottypes.Command{Text: "/set_info_start"}},
+			{ChatID: chatID, Text: "Set Info", Command: cmd.SetInfoStartCommand},
 		},
 	}
 	buttonRow7 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
-			{ChatID: chatID, Text: "Checkboxes", Command: bottypes.Command{Text: "/checkboxes_start"}},
+			{ChatID: chatID, Text: "Checkboxes", Command: cmd.CheckboxStartCommand},
 		},
 	}
 
 	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3, buttonRow4, buttonRow5, buttonRow6, buttonRow7)
+
 	res.messages = append(res.messages, retMessage)
 
-	return HandlerResponse{messages: res.messages, nextState: "start-state"}
+	return HandlerResponse{messages: res.messages}, nil
 }
 
-func (handler *Handler) BigMessagesHandler(params HandlerParams) HandlerResponse {
+func (handler *StartHandler) BigMessagesHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	chatID := params.message.ChatID
+	chatID := params.message.Info.ChatID
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "Давно выяснено, что при оценке дизайна и композиции читаемый текст мешает сосредоточиться. Lorem Ipsum используют потому, что тот обеспечивает более или менее стандартное заполнение шаблона, а также реальное распределение букв и пробелов в абзацах, которое не получается при простой дубликации 'Здесь ваш текст.. Здесь ваш текст.. Здесь ваш текст..' Многие программы электронной вёрстки и редакторы HTML используют Lorem Ipsum в качестве текста по умолчанию, так что поиск по ключевым словам 'lorem ipsum' сразу показывает, как много веб-страниц всё ещё дожидаются своего настоящего рождения. За прошедшие годы текст Lorem Ipsum получил много версий. Некоторые версии появились по ошибке, некоторые - намеренно (например, юмористические варианты)."})
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "Давно выяснено, что при оценке дизайна и композиции читаемый текст мешает сосредоточиться. Lorem Ipsum используют потому, что тот обеспечивает более или менее стандартное заполнение шаблона, а также реальное распределение букв и пробелов в абзацах, которое не получается при простой дубликации 'Здесь ваш текст.. Здесь ваш текст.. Здесь ваш текст..' Многие программы электронной вёрстки и редакторы HTML используют Lorem Ipsum в качестве текста по умолчанию, так что поиск по ключевым словам 'lorem ipsum' сразу показывает, как много веб-страниц всё ещё дожидаются своего настоящего рождения. За прошедшие годы текст Lorem Ipsum получил много версий. Некоторые версии появились по ошибке, некоторые - намеренно (например, юмористические варианты)."})
 	res.messages = append(res.messages, bottypes.Message{ChatID: chatID, Text: "Давно выяснено, что при оценке дизайна и композиции читаемый текст мешает сосредоточиться. Lorem Ipsum используют потому, что тот обеспечивает более или менее стандартное заполнение шаблона, а также реальное распределение букв и пробелов в абзацах, которое не получается при простой дубликации 'Здесь ваш текст.. Здесь ваш текст.. Здесь ваш текст..' Многие программы электронной вёрстки и редакторы HTML используют Lorem Ipsum в качестве текста по умолчанию, так что поиск по ключевым словам 'lorem ipsum' сразу показывает, как много веб-страниц всё ещё дожидаются своего настоящего рождения. За прошедшие годы текст Lorem Ipsum получил много версий. Некоторые версии появились по ошибке, некоторые - намеренно (например, юмористические варианты)."})
-
-	return HandlerResponse{messages: res.messages, nextState: "start-state"}
+	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.ShowCommandsCommand)
+	return HandlerResponse{messages: res.messages, nextState: "start-state", postCommandsHandle: res.postCommandsHandle}, nil
 }

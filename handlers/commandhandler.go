@@ -3,17 +3,20 @@ package handlers
 import (
 	"fmt"
 	"slices"
-	"strings"
 
-	"github.com/H1ghN0on/go-tgbot-engine/bot"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	"github.com/H1ghN0on/go-tgbot-engine/bot/client"
+	"github.com/H1ghN0on/go-tgbot-engine/logger"
+
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
 )
 
 type Stater interface {
 	GetName() string
-	GetStartCommand() string
-	GetAvailableCommands() []string
+	GetStartCommand() bottypes.Command
+	GetAvailableCommands() []bottypes.Command
 	GetAvailableStates() []Stater
+	CanRestart() bool
 }
 
 type StateMachiner interface {
@@ -43,13 +46,20 @@ type GlobalStater interface {
 	SetName(name string)
 	SetSurname(surname string)
 	SetAge(age int)
+
+	GetDataForDynamicKeyboard() map[string][]string
 }
 
 type Handlerable interface {
-	GetCommands() []string
-	InitHandler()
-	Handle(command string, params HandlerParams) ([]HandlerResponse, bool)
-	DeinitHandler()
+	GetCommands() []bottypes.Command
+	Handle(params HandlerParams) ([]HandlerResponse, error)
+	HandleBackCommand(params HandlerParams) ([]HandlerResponse, error)
+}
+
+type BackHandlerable interface {
+	Handlerable
+	UpdateLastCommand(command bottypes.Command)
+	ClearCommandQueue()
 }
 
 type CommandHandlerError struct {
@@ -61,24 +71,19 @@ func (err CommandHandlerError) Error() string {
 }
 
 type CommandHandlerRequest struct {
-	receivedMessage   bottypes.Message
-	shouldUpdateQueue bool
+	receivedMessage bottypes.ParsedMessage
 }
 
-func (req CommandHandlerRequest) GetMessage() bottypes.Message {
+func (req CommandHandlerRequest) GetMessage() bottypes.ParsedMessage {
 	return req.receivedMessage
-}
-
-func (req CommandHandlerRequest) ShouldUpdateQueue() bool {
-	return req.shouldUpdateQueue
 }
 
 type CommandHandlerResponse struct {
 	responses []HandlerResponse
 }
 
-func (chr CommandHandlerResponse) GetResponses() []bot.HandlerResponser {
-	var convertedResponses []bot.HandlerResponser
+func (chr CommandHandlerResponse) GetResponses() []client.HandlerResponser {
+	var convertedResponses []client.HandlerResponser
 
 	for _, response := range chr.responses {
 		convertedResponses = append(convertedResponses, response)
@@ -87,210 +92,201 @@ func (chr CommandHandlerResponse) GetResponses() []bot.HandlerResponser {
 }
 
 type CommandHandler struct {
-	sm            StateMachiner
-	gs            GlobalStater
-	commandsQueue []string
-	handlers      []Handlerable
-	activeHandler Handlerable
+	sm           StateMachiner
+	gs           *GlobalStater
+	handlers     []Handlerable
+	backHandler  BackHandlerable
+	nextCommands []bottypes.Command
 }
 
-func (ch *CommandHandler) updateCommandsQueue(command string) {
-	switch command {
-	case "/back_command":
-		ch.commandsQueue = ch.commandsQueue[:len(ch.commandsQueue)-1]
-	case "/back_state":
-		break
-	default:
-		ch.commandsQueue = append(ch.commandsQueue, command)
+func convertCommandsToString(commands []bottypes.Command) string {
+	var ret string
+	for _, command := range commands {
+		ret += command.String() + " "
+	}
+	if len(ret) != 0 {
+		ret = ret[:len(ret)-1]
 	}
 
-	if len(ch.commandsQueue) > 20 {
-		ch.commandsQueue = ch.commandsQueue[1:len(ch.commandsQueue)]
-	}
+	return ret
 }
 
-func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.Message, shouldUpdateQueue bool) bot.CommandHandlerRequester {
-	return &CommandHandlerRequest{
-		receivedMessage:   msg,
-		shouldUpdateQueue: shouldUpdateQueue,
+func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.ParsedMessage) client.CommandHandlerRequester {
+	return CommandHandlerRequest{
+		receivedMessage: msg,
 	}
 }
 
-func (ch *CommandHandler) handleBackStateRequest(req bot.CommandHandlerRequester) (bot.CommandHandlerResponser, error) {
-
-	var res CommandHandlerResponse
-
-	previousState := ch.sm.GetPreviousState()
-	if previousState.GetName() == "" {
-		return CommandHandlerResponse{}, CommandHandlerError{message: "can not return to previous state"}
-	}
-	ch.sm.SetState(previousState)
-	receivedMessageBack := req.GetMessage()
-	receivedMessageBack.Text = previousState.GetStartCommand()
-
-	handleRes, err := ch.Handle(CommandHandlerRequest{
-		receivedMessage:   receivedMessageBack,
-		shouldUpdateQueue: false,
-	})
-
-	if err != nil {
-		return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back error: %w", err).Error()}
-	}
-
-	if req.ShouldUpdateQueue() {
-		ch.updateCommandsQueue(req.GetMessage().Text)
-	}
-
-	res = handleRes.(CommandHandlerResponse)
-	res.responses = append(res.responses, HandlerResponse{
-		triggers: []bottypes.Trigger{bottypes.RemoveTrigger, bottypes.StopKeyboardTrigger},
-	})
-
-	return res, nil
-}
-
-func (ch *CommandHandler) handleBackCommandRequest(req bot.CommandHandlerRequester) (bot.CommandHandlerResponser, error) {
-
-	var res CommandHandlerResponse
-
-	if len(ch.commandsQueue) < 2 {
-		return CommandHandlerResponse{}, CommandHandlerError{message: "can not return to previous command"}
-	}
-	lastCommand := ch.commandsQueue[len(ch.commandsQueue)-2]
-	if lastCommand == "" {
-		return CommandHandlerResponse{}, CommandHandlerError{message: "can not return to previous command"}
-	}
-
-	receivedMessageBack := req.GetMessage()
-	receivedMessageBack.Text = lastCommand
-
-	handleRes, err := ch.Handle(CommandHandlerRequest{
-		receivedMessage:   receivedMessageBack,
-		shouldUpdateQueue: false,
-	})
-
-	if err != nil {
-		return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back command error: %w", err).Error()}
-	}
-
-	if req.ShouldUpdateQueue() {
-		ch.updateCommandsQueue(req.GetMessage().Text)
-	}
-
-	res = handleRes.(CommandHandlerResponse)
-
-	return res, nil
-}
-
-func (ch *CommandHandler) checkCommandInState(command string) bool {
-	return slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), command) ||
-		(slices.Contains(ch.sm.GetActiveState().GetAvailableCommands(), "*") && !strings.HasPrefix(command, "/"))
-}
-
-func (ch *CommandHandler) moveToAnotherState(message bottypes.Message) []HandlerResponse {
-
-	startStateCommand := ch.sm.GetActiveState().GetStartCommand()
-
-	if message.Text == startStateCommand {
-		return nil
-	}
-
-	for _, handler := range ch.handlers {
-		if slices.Contains(handler.GetCommands(), startStateCommand) {
-			handler.InitHandler()
-			responses, _ := handler.Handle(startStateCommand, HandlerParams{message: message})
-			handler.DeinitHandler()
-			return responses
-		}
-	}
-
-	return nil
-}
-
-func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHandlerResponser, error) {
-	var res CommandHandlerResponse
-
-	receivedMessage := req.GetMessage()
-	command := receivedMessage.Text
-
-	if !ch.checkCommandInState(command) {
-		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available "}
-	}
-
-	// Trying to handle in main handlers
-
-	for _, handler := range ch.handlers {
-		if slices.Contains(handler.GetCommands(), command) || ch.activeHandler != nil {
-			if ch.activeHandler == nil {
-				ch.activeHandler = handler
-				ch.activeHandler.InitHandler()
-			}
-			responses, isFinished := ch.activeHandler.Handle(command, HandlerParams{message: receivedMessage})
-			if isFinished {
-				ch.activeHandler.DeinitHandler()
-				ch.activeHandler = nil
-			}
-			if req.ShouldUpdateQueue() {
-				ch.updateCommandsQueue(command)
-			}
-			res.responses = responses
-			break
-		}
-	}
-
-	// Trying to handle in additional handlers
-
-	if len(res.responses) == 0 {
-		switch command {
-		case "/back_command":
-			handleRes, err := ch.handleBackCommandRequest(req)
-			if err != nil {
-				return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back command error: %w", err).Error()}
-			}
-			return handleRes, nil
-
-		case "/back_state":
-			handleRes, err := ch.handleBackStateRequest(req)
-
-			if err != nil {
-				return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("back state error: %w", err).Error()}
-			}
-			return handleRes, nil
-		case "/create_error":
-			return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown"}
-		default:
-			return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown"}
-		}
-	}
+func (ch *CommandHandler) updateState(res CommandHandlerResponse) error {
 
 	if hasMultipleStatesInCommand(res) {
-		return CommandHandlerResponse{}, CommandHandlerError{message: "multiple states in commands are forbidden"}
+		return CommandHandlerError{message: "multiple states in commands are forbidden"}
 	}
-
-	// Trying to move to another state (if so, handle start command of new state)
 
 	for _, response := range res.responses {
 		if response.NextState() == "" {
 			continue
 		}
+
 		err := ch.sm.SetStateByName(response.NextState())
+		ch.backHandler.ClearCommandQueue()
 		if err != nil {
-			return CommandHandlerResponse{}, CommandHandlerError{message: fmt.Errorf("handler error: %w", err).Error()}
-		}
-		stateResponses := ch.moveToAnotherState(receivedMessage)
-		if stateResponses != nil {
-			res.responses = append(res.responses, stateResponses...)
+			return CommandHandlerError{message: fmt.Errorf("handler error: %w", err).Error()}
 		}
 		break
+	}
+	return nil
+}
+
+func (ch *CommandHandler) updateNextCommands(responses []HandlerResponse) {
+	ch.nextCommands = nil
+	for _, response := range responses {
+		ch.nextCommands = append(ch.nextCommands, response.nextCommands...)
+	}
+}
+
+func isCommandInSlice(commands []bottypes.Command, command bottypes.Command) bool {
+	return slices.ContainsFunc(commands, func(cmd bottypes.Command) bool { return command.Equal(cmd) })
+}
+
+func (ch *CommandHandler) checkCommandInState(command bottypes.Command) bool {
+	return isCommandInSlice(ch.sm.GetActiveState().GetAvailableCommands(), command) ||
+		(isCommandInSlice(ch.sm.GetActiveState().GetAvailableCommands(), cmd.AnyCommand) && !command.IsCommand())
+}
+
+func (ch *CommandHandler) checkCommandInNextCommands(command bottypes.Command) bool {
+	return len(ch.nextCommands) == 0 || isCommandInSlice(ch.nextCommands, command) ||
+		(isCommandInSlice(ch.nextCommands, cmd.AnyCommand) && !command.IsCommand())
+}
+
+func (ch *CommandHandler) checkCommandInHandler(command bottypes.Command, handler Handlerable) bool {
+	commandsToCheck := handler.GetCommands()
+	return isCommandInSlice(commandsToCheck, command) ||
+		(isCommandInSlice(commandsToCheck, cmd.AnyCommand) && !command.IsCommand())
+}
+
+func (ch *CommandHandler) hasCommandInHandler(commands []bottypes.Command, handler Handlerable) bool {
+
+	commandsToCheck := handler.GetCommands()
+	for _, command := range commands {
+		if isCommandInSlice(commandsToCheck, command) || (isCommandInSlice(commandsToCheck, cmd.AnyCommand) && !command.IsCommand()) {
+			return true
+		}
+	}
+	return false
+}
+
+func (ch *CommandHandler) handlePostCommands(message bottypes.ParsedMessage, responses []HandlerResponse) ([]client.HandlerResponser, error) {
+
+	var res []client.HandlerResponser
+
+	for idx, response := range responses {
+		for _, commandToHandle := range response.postCommandsHandle.commands {
+			handleRes, err := ch.handleCommand(commandToHandle, message, response.postCommandsHandle.isBackCommand)
+			if err != nil {
+				return []client.HandlerResponser{}, CommandHandlerError{message: "handle post commands: " + err.Error()}
+			}
+			res = append(res, handleRes.GetResponses()...)
+		}
+		responses[idx].postCommandsHandle.commands = nil
 	}
 
 	return res, nil
 }
 
+func (ch *CommandHandler) handleCommand(
+	command bottypes.Command,
+	receivedMessage bottypes.ParsedMessage,
+	shouldHandleBack bool) (client.CommandHandlerResponser, error) {
+
+	var res CommandHandlerResponse
+
+	logger.CommandHandler().Info("trying to handle", command.String())
+
+	for _, handler := range ch.handlers {
+		commandToCheck := command
+		if !command.IsCommand() && ch.hasCommandInHandler(ch.nextCommands, handler) {
+			commandToCheck = cmd.AnyCommand
+		}
+
+		if ch.checkCommandInHandler(commandToCheck, handler) {
+
+			if shouldHandleBack {
+				responses, err := handler.HandleBackCommand(HandlerParams{command: commandToCheck, message: receivedMessage})
+
+				if err != nil {
+					logger.CommandHandler().Critical("error while handling command", command.String(), err.Error())
+					return CommandHandlerResponse{}, CommandHandlerError{message: err.Error()}
+				}
+				res.responses = append(res.responses, responses...)
+			}
+
+			responses, err := handler.Handle(HandlerParams{command: commandToCheck, message: receivedMessage})
+
+			if err != nil {
+				logger.CommandHandler().Critical("error while handling command", command.String(), err.Error())
+				return CommandHandlerResponse{}, CommandHandlerError{message: err.Error()}
+			}
+
+			ch.backHandler.UpdateLastCommand(command)
+			res.responses = append(res.responses, responses...)
+			break
+		}
+	}
+
+	if len(res.responses) == 0 {
+		logger.CommandHandler().Warning("command", command.String(), "is unknown")
+		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is unknown"}
+	}
+
+	err := ch.updateState(res)
+	if err != nil {
+		return CommandHandlerResponse{}, CommandHandlerError{message: "command handler error: " + err.Error()}
+	}
+	ch.updateNextCommands(res.responses)
+
+	postCommandResponses, err := ch.handlePostCommands(receivedMessage, res.responses)
+	if err != nil {
+		return CommandHandlerResponse{}, err
+	}
+
+	for _, postCommandResponse := range postCommandResponses {
+		res.responses = append(res.responses, postCommandResponse.(HandlerResponse))
+	}
+
+	ch.updateNextCommands(res.responses)
+
+	logger.CommandHandler().Info("command", command.String(), "handled successfully")
+
+	return res, nil
+}
+
+func (ch *CommandHandler) Handle(req client.CommandHandlerRequester) (client.CommandHandlerResponser, error) {
+
+	receivedMessage := req.GetMessage()
+
+	if !ch.checkCommandInNextCommands(receivedMessage.Command) {
+		logger.CommandHandler().Critical(receivedMessage.Command.String(), "is not in next commands (", convertCommandsToString(ch.nextCommands), ")")
+		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available (not in next commands)"}
+	}
+
+	if !ch.checkCommandInState(receivedMessage.Command) {
+		logger.CommandHandler().Critical(receivedMessage.Command.String(), "is not in state commands (", convertCommandsToString(ch.sm.GetActiveState().GetAvailableCommands()), ")")
+		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available (not in state)"}
+	}
+
+	chRes, err := ch.handleCommand(receivedMessage.Command, receivedMessage, false)
+	if err != nil {
+		return CommandHandlerResponse{}, err
+	}
+
+	return chRes, nil
+}
+
 func NewCommandHandler(sm StateMachiner, gs GlobalStater) *CommandHandler {
 	ch := &CommandHandler{
 		sm: sm,
-		gs: gs,
+		gs: &gs,
 	}
 
 	setInfoHandler := NewSetInfoHandler(gs)
@@ -298,8 +294,19 @@ func NewCommandHandler(sm StateMachiner, gs GlobalStater) *CommandHandler {
 	levelFourHandler := NewLevelFourHandler(gs)
 	startHandler := NewStartHandler(gs)
 	checkboxHandler := NewCheckboxHandler(gs)
+	dynamicKeyboardHandler := NewDynamicKeyboardhandler(gs)
+	backHandler := NewBackHandler(gs, sm)
 
-	ch.handlers = append(ch.handlers, setInfoHandler, keyboardHandler, levelFourHandler, startHandler, checkboxHandler)
+	ch.handlers = append(ch.handlers,
+		setInfoHandler,
+		keyboardHandler,
+		levelFourHandler,
+		startHandler,
+		checkboxHandler,
+		dynamicKeyboardHandler,
+		backHandler)
+
+	ch.backHandler = backHandler
 
 	return ch
 }

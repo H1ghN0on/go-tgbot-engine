@@ -7,100 +7,12 @@ import (
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
 	"github.com/H1ghN0on/go-tgbot-engine/globalstate"
-	"github.com/H1ghN0on/go-tgbot-engine/handlers"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
-	"github.com/H1ghN0on/go-tgbot-engine/statemachine"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"github.com/joho/godotenv"
 )
-
-func configurateStateMachine(sm *statemachine.StateMachine) {
-	startState := statemachine.NewState(
-		"start-state",
-
-		"/show_commands",
-
-		"/level_one",
-		"/level_two",
-		"/level_three",
-		"/show_commands",
-		"/keyboard_start",
-		"/create_error",
-		"/level_four_start",
-		"/big_messages",
-		"/set_info_start",
-		"/checkboxes_start",
-	)
-
-	levelFourState := statemachine.NewState(
-		"level-four-state",
-
-		"/level_four_start",
-
-		"/level_four_start",
-		"/level_four_one",
-		"/level_four_two",
-		"/level_four_three",
-		"/level_four_four",
-		"/back_state",
-	)
-
-	keyboardState := statemachine.NewState(
-		"keyboard-state",
-
-		"/keyboard_start",
-
-		"/keyboard_start",
-		"/keyboard_one",
-		"/keyboard_two",
-		"/keyboard_three",
-		"/back_state",
-		"/back_command",
-	)
-
-	infoState := statemachine.NewState(
-		"info-state",
-
-		"/set_info_start",
-
-		"/set_info_start",
-		"/set_name",
-		"/set_surname",
-		"/set_age",
-		"/set_info_end",
-		"/back_state",
-		"*",
-	)
-
-	checkboxState := statemachine.NewState(
-		"checkbox-state",
-
-		"/checkboxes_start",
-
-		"/checkboxes_start",
-		"/checkboxes_first",
-		"/checkboxes_second",
-		"/checkboxes_third",
-		"/checkboxes_fourth",
-		"/checkboxes_accept",
-		"/nothingness",
-	)
-
-	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState)
-	levelFourState.SetAvailableStates(*startState)
-	keyboardState.SetAvailableStates(*startState)
-	infoState.SetAvailableStates((*startState))
-	checkboxState.SetAvailableStates((*startState))
-
-	sm.AddStates(*startState, *levelFourState, *keyboardState, *infoState, *checkboxState)
-
-	err := sm.SetStateByName("start-state")
-	if err != nil {
-		panic(err.Error())
-	}
-}
 
 func main() {
 
@@ -118,8 +30,9 @@ func main() {
 		levelInt = 0
 	}
 
-	mainLogger := logger.NewLogger(levelInt)
-	mainLogger.Info("This is an info message")
+	logger.InitGlobalLoggerSettings(logger.LoggerSettings{
+		Level: logger.LogLevel(levelInt),
+	})
 
 	tgBotKey, exists := os.LookupEnv("TELEGRAM_BOT_API")
 	if !exists {
@@ -130,13 +43,8 @@ func main() {
 		panic(err.Error())
 	}
 
-	var sm statemachine.StateMachine
-	configurateStateMachine(&sm)
-
 	var gs globalstate.GlobalState
 
-	commandHandler := handlers.NewCommandHandler(&sm, &gs)
-
-	client := bot.NewClient(botAPI, commandHandler)
-	client.ListenMessages()
+	bot := bot.NewBot(botAPI, &gs)
+	bot.ListenMessages()
 }

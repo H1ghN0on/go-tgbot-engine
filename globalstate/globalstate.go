@@ -29,3 +29,10 @@ func (gs *GlobalState) SetSurname(surname string) {
 func (gs *GlobalState) SetAge(age int) {
 	gs.age = age
 }
+
+func (gs *GlobalState) GetDataForDynamicKeyboard() map[string][]string {
+	return map[string][]string{
+		"first_stage":  {"Necromantic", "Gotcha gotcha", "Hanipaganda"},
+		"second_stage": {"Bad magus", "Third eye", "Midnight parade"},
+	}
+}
