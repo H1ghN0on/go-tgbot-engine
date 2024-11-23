@@ -112,7 +112,7 @@ func convertCommandsToString(commands []bottypes.Command) string {
 }
 
 func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.ParsedMessage) client.CommandHandlerRequester {
-	return &CommandHandlerRequest{
+	return CommandHandlerRequest{
 		receivedMessage: msg,
 	}
 }

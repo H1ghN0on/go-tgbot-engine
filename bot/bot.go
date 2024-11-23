@@ -92,6 +92,7 @@ func (bot *Bot) ListenMessages() {
 		activeClient, ok := bot.clients[receivedMessage.ChatID]
 
 		if !ok {
+			logger.Bot().Info("adding new client with id", string(receivedMessage.ChatID))
 			sm := statemachine.NewStateMachine()
 			ch := handlers.NewCommandHandler(sm, bot.gs)
 			activeClient = client.NewClient(bot.api, ch)

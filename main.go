@@ -45,6 +45,6 @@ func main() {
 
 	var gs globalstate.GlobalState
 
-	client := bot.NewBot(botAPI, &gs)
-	client.ListenMessages()
+	bot := bot.NewBot(botAPI, &gs)
+	bot.ListenMessages()
 }

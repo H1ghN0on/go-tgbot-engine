@@ -298,7 +298,7 @@ func (client *Client) setNextCommandToParse(command bottypes.ParseableCommand) {
 	if command.Command.Command == "" {
 		client.nextCommandToParse = bottypes.ParseableCommand{}
 	} else {
-		logger.Bot().Info("command", command.Command.Command, "will be parsed")
+		logger.Client().Info("command", command.Command.Command, "will be parsed")
 		client.nextCommandToParse = command
 	}
 }
@@ -323,12 +323,12 @@ func (client *Client) HandleNewMessage(receivedMessage bottypes.Message) {
 		for _, message := range response.GetMessages() {
 
 			if message.ChatID == 0 {
-				logger.Bot().Critical("receiver of sending message is unknown")
+				logger.Client().Critical("receiver of sending message is unknown")
 				panic("Chat ID = 0")
 			}
 
 			if len(message.ButtonRows) == 0 && message.Text == "" {
-				logger.Bot().Warning("trying to send empty message, skipped")
+				logger.Client().Warning("trying to send empty message, skipped")
 				continue
 			}
 
@@ -350,12 +350,12 @@ func (client *Client) HandleNewMessage(receivedMessage bottypes.Message) {
 			}
 
 			if response.ContainsTrigger(bottypes.AddToNextRemoveTrigger) {
-				logger.Bot().Info("message", strconv.Itoa(client.lastMessage.ID), "marked to remove")
+				logger.Client().Info("message", strconv.Itoa(client.lastMessage.ID), "marked to remove")
 				client.addToRemoveMessagesQueue(client.lastMessage)
 			}
 		}
 		if response.ContainsTrigger(bottypes.RemoveTrigger) {
-			logger.Bot().Info("removing all marked messages")
+			logger.Client().Info("removing all marked messages")
 			err := client.removeMessagesByTrigger()
 			if err != nil {
 				panic(err)

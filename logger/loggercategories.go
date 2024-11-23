@@ -12,6 +12,12 @@ func Bot() *Logger {
 	return logger
 }
 
+func Client() *Logger {
+	logger := GlobalLogger
+	logger.category = "Client"
+	return logger
+}
+
 func StateMachine() *Logger {
 	logger := GlobalLogger
 	logger.category = "StateMachine"
