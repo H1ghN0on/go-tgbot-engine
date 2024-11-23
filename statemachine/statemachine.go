@@ -86,14 +86,6 @@ func (sm *StateMachine) AddStates(states ...handlers.Stater) {
 	}
 }
 
-func (sm *StateMachine) SetStateByName(stateName string) error {
-	err := sm.SetState(State{name: stateName})
-	if err != nil {
-		return StateMachineError{message: err.Error()}
-	}
-	return nil
-}
-
 func (sm *StateMachine) SetState(state handlers.Stater) error {
 	if state.GetName() == "" {
 		logger.StateMachine().Critical("state has empty name")
@@ -115,6 +107,14 @@ func (sm *StateMachine) SetState(state handlers.Stater) error {
 		return nil
 	}
 	return StateMachineError{message: "Can not move to this state"}
+}
+
+func (sm *StateMachine) SetStateByName(stateName string) error {
+	err := sm.SetState(State{name: stateName})
+	if err != nil {
+		return StateMachineError{message: err.Error()}
+	}
+	return nil
 }
 
 func (sm *StateMachine) GetPreviousState() handlers.Stater {
