@@ -6,6 +6,8 @@ import (
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
+
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
 )
 
 type Command string
@@ -121,4 +123,111 @@ func (sm *StateMachine) GetPreviousState() handlers.Stater {
 
 func (sm *StateMachine) GetActiveState() handlers.Stater {
 	return sm.activeState
+}
+
+func NewStateMachine() *StateMachine {
+
+	startState := NewState(
+		"start-state",
+
+		cmd.ShowCommandsCommand,
+
+		cmd.LevelOneCommand,
+		cmd.LevelTwoCommand,
+		cmd.LevelThreeCommand,
+		cmd.ShowCommandsCommand,
+		cmd.KeyboardStartCommand,
+		cmd.LevelFourStartCommand,
+		cmd.BigMessagesCommand,
+		cmd.SetInfoStartCommand,
+		cmd.CheckboxStartCommand,
+		cmd.DynamicKeyboardStartCommand,
+	)
+
+	levelFourState := NewState(
+		"level-four-state",
+
+		cmd.LevelFourStartCommand,
+
+		cmd.LevelFourStartCommand,
+		cmd.LevelFourOneCommand,
+		cmd.LevelFourTwoCommand,
+		cmd.LevelFourThreeCommand,
+		cmd.LevelFourFourCommand,
+		cmd.BackStateCommand,
+	)
+
+	keyboardState := NewState(
+		"keyboard-state",
+
+		cmd.KeyboardStartCommand,
+
+		cmd.KeyboardStartCommand,
+		cmd.KeyboardOneCommand,
+		cmd.KeyboardTwoCommand,
+		cmd.KeyboardThreeCommand,
+		cmd.KeyboardFinishCommand,
+		cmd.BackStateCommand,
+		cmd.BackCommandCommand,
+	)
+
+	infoState := NewState(
+		"info-state",
+
+		cmd.SetInfoStartCommand,
+
+		cmd.SetInfoStartCommand,
+		cmd.SetNameCommand,
+		cmd.SetSurnameCommand,
+		cmd.SetAgeCommand,
+		cmd.SetInfoEndCommand,
+		cmd.BackStateCommand,
+		cmd.BackCommandCommand,
+		cmd.AnyCommand,
+	)
+
+	checkboxState := NewState(
+		"checkbox-state",
+
+		cmd.CheckboxStartCommand,
+
+		cmd.CheckboxStartCommand,
+		cmd.CheckboxFirstCommand,
+		cmd.CheckboxSecondCommand,
+		cmd.CheckboxThirdCommand,
+		cmd.CheckboxFourthCommand,
+		cmd.CheckboxAcceptCommand,
+		cmd.BackStateCommand,
+		cmd.NothingnessCommand,
+	)
+
+	dynamicKeyboardState := NewState(
+		"dynamic-keyboard-state",
+
+		cmd.DynamicKeyboardStartCommand,
+
+		cmd.DynamicKeyboardFirstStageCommand,
+		cmd.DynamicKeyboardSecondStageCommand,
+		cmd.DynamicKeyboardFinishCommand,
+		cmd.BackStateCommand,
+		cmd.BackCommandCommand,
+	)
+
+	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState, *startState, *dynamicKeyboardState)
+	levelFourState.SetAvailableStates(*startState)
+	keyboardState.SetAvailableStates(*startState)
+	infoState.SetAvailableStates((*startState))
+	checkboxState.SetAvailableStates((*startState))
+	dynamicKeyboardState.SetAvailableStates((*startState))
+
+	sm := &StateMachine{}
+
+	sm.AddStates(*startState, *levelFourState, *keyboardState, *infoState, *checkboxState, *dynamicKeyboardState)
+
+	err := sm.SetStateByName("start-state")
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return sm
 }

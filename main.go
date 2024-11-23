@@ -7,117 +7,12 @@ import (
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
 	"github.com/H1ghN0on/go-tgbot-engine/globalstate"
-	"github.com/H1ghN0on/go-tgbot-engine/handlers"
-	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
-	"github.com/H1ghN0on/go-tgbot-engine/statemachine"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"github.com/joho/godotenv"
 )
-
-func configurateStateMachine(sm *statemachine.StateMachine) {
-	startState := statemachine.NewState(
-		"start-state",
-
-		cmd.ShowCommandsCommand,
-
-		cmd.LevelOneCommand,
-		cmd.LevelTwoCommand,
-		cmd.LevelThreeCommand,
-		cmd.ShowCommandsCommand,
-		cmd.KeyboardStartCommand,
-		cmd.LevelFourStartCommand,
-		cmd.BigMessagesCommand,
-		cmd.SetInfoStartCommand,
-		cmd.CheckboxStartCommand,
-		cmd.DynamicKeyboardStartCommand,
-	)
-
-	levelFourState := statemachine.NewState(
-		"level-four-state",
-
-		cmd.LevelFourStartCommand,
-
-		cmd.LevelFourStartCommand,
-		cmd.LevelFourOneCommand,
-		cmd.LevelFourTwoCommand,
-		cmd.LevelFourThreeCommand,
-		cmd.LevelFourFourCommand,
-		cmd.BackStateCommand,
-	)
-
-	keyboardState := statemachine.NewState(
-		"keyboard-state",
-
-		cmd.KeyboardStartCommand,
-
-		cmd.KeyboardStartCommand,
-		cmd.KeyboardOneCommand,
-		cmd.KeyboardTwoCommand,
-		cmd.KeyboardThreeCommand,
-		cmd.KeyboardFinishCommand,
-		cmd.BackStateCommand,
-		cmd.BackCommandCommand,
-	)
-
-	infoState := statemachine.NewState(
-		"info-state",
-
-		cmd.SetInfoStartCommand,
-
-		cmd.SetInfoStartCommand,
-		cmd.SetNameCommand,
-		cmd.SetSurnameCommand,
-		cmd.SetAgeCommand,
-		cmd.SetInfoEndCommand,
-		cmd.BackStateCommand,
-		cmd.BackCommandCommand,
-		cmd.AnyCommand,
-	)
-
-	checkboxState := statemachine.NewState(
-		"checkbox-state",
-
-		cmd.CheckboxStartCommand,
-
-		cmd.CheckboxStartCommand,
-		cmd.CheckboxFirstCommand,
-		cmd.CheckboxSecondCommand,
-		cmd.CheckboxThirdCommand,
-		cmd.CheckboxFourthCommand,
-		cmd.CheckboxAcceptCommand,
-		cmd.BackStateCommand,
-		cmd.NothingnessCommand,
-	)
-
-	dynamicKeyboardState := statemachine.NewState(
-		"dynamic-keyboard-state",
-
-		cmd.DynamicKeyboardStartCommand,
-
-		cmd.DynamicKeyboardFirstStageCommand,
-		cmd.DynamicKeyboardSecondStageCommand,
-		cmd.DynamicKeyboardFinishCommand,
-		cmd.BackStateCommand,
-		cmd.BackCommandCommand,
-	)
-
-	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState, *startState, *dynamicKeyboardState)
-	levelFourState.SetAvailableStates(*startState)
-	keyboardState.SetAvailableStates(*startState)
-	infoState.SetAvailableStates((*startState))
-	checkboxState.SetAvailableStates((*startState))
-	dynamicKeyboardState.SetAvailableStates((*startState))
-
-	sm.AddStates(*startState, *levelFourState, *keyboardState, *infoState, *checkboxState, *dynamicKeyboardState)
-
-	err := sm.SetStateByName("start-state")
-	if err != nil {
-		panic(err.Error())
-	}
-}
 
 func main() {
 
@@ -148,13 +43,8 @@ func main() {
 		panic(err.Error())
 	}
 
-	var sm statemachine.StateMachine
-	configurateStateMachine(&sm)
-
 	var gs globalstate.GlobalState
 
-	commandHandler := handlers.NewCommandHandler(&sm, &gs)
-
-	client := bot.NewClient(botAPI, commandHandler)
+	client := bot.NewBot(botAPI, &gs)
 	client.ListenMessages()
 }

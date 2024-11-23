@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/H1ghN0on/go-tgbot-engine/bot"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	"github.com/H1ghN0on/go-tgbot-engine/bot/client"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
 
 	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
@@ -82,8 +82,8 @@ type CommandHandlerResponse struct {
 	responses []HandlerResponse
 }
 
-func (chr CommandHandlerResponse) GetResponses() []bot.HandlerResponser {
-	var convertedResponses []bot.HandlerResponser
+func (chr CommandHandlerResponse) GetResponses() []client.HandlerResponser {
+	var convertedResponses []client.HandlerResponser
 
 	for _, response := range chr.responses {
 		convertedResponses = append(convertedResponses, response)
@@ -93,7 +93,7 @@ func (chr CommandHandlerResponse) GetResponses() []bot.HandlerResponser {
 
 type CommandHandler struct {
 	sm           StateMachiner
-	gs           GlobalStater
+	gs           *GlobalStater
 	handlers     []Handlerable
 	backHandler  BackHandlerable
 	nextCommands []bottypes.Command
@@ -111,7 +111,7 @@ func convertCommandsToString(commands []bottypes.Command) string {
 	return ret
 }
 
-func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.ParsedMessage) bot.CommandHandlerRequester {
+func (ch *CommandHandler) NewCommandHandlerRequest(msg bottypes.ParsedMessage) client.CommandHandlerRequester {
 	return &CommandHandlerRequest{
 		receivedMessage: msg,
 	}
@@ -176,15 +176,15 @@ func (ch *CommandHandler) hasCommandInHandler(commands []bottypes.Command, handl
 	return false
 }
 
-func (ch *CommandHandler) handlePostCommands(message bottypes.ParsedMessage, responses []HandlerResponse) ([]bot.HandlerResponser, error) {
+func (ch *CommandHandler) handlePostCommands(message bottypes.ParsedMessage, responses []HandlerResponse) ([]client.HandlerResponser, error) {
 
-	var res []bot.HandlerResponser
+	var res []client.HandlerResponser
 
 	for idx, response := range responses {
 		for _, commandToHandle := range response.postCommandsHandle.commands {
 			handleRes, err := ch.handleCommand(commandToHandle, message, response.postCommandsHandle.isBackCommand)
 			if err != nil {
-				return []bot.HandlerResponser{}, CommandHandlerError{message: "handle post commands: " + err.Error()}
+				return []client.HandlerResponser{}, CommandHandlerError{message: "handle post commands: " + err.Error()}
 			}
 			res = append(res, handleRes.GetResponses()...)
 		}
@@ -197,7 +197,7 @@ func (ch *CommandHandler) handlePostCommands(message bottypes.ParsedMessage, res
 func (ch *CommandHandler) handleCommand(
 	command bottypes.Command,
 	receivedMessage bottypes.ParsedMessage,
-	shouldHandleBack bool) (bot.CommandHandlerResponser, error) {
+	shouldHandleBack bool) (client.CommandHandlerResponser, error) {
 
 	var res CommandHandlerResponse
 
@@ -261,7 +261,7 @@ func (ch *CommandHandler) handleCommand(
 	return res, nil
 }
 
-func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHandlerResponser, error) {
+func (ch *CommandHandler) Handle(req client.CommandHandlerRequester) (client.CommandHandlerResponser, error) {
 
 	receivedMessage := req.GetMessage()
 
@@ -286,7 +286,7 @@ func (ch *CommandHandler) Handle(req bot.CommandHandlerRequester) (bot.CommandHa
 func NewCommandHandler(sm StateMachiner, gs GlobalStater) *CommandHandler {
 	ch := &CommandHandler{
 		sm: sm,
-		gs: gs,
+		gs: &gs,
 	}
 
 	setInfoHandler := NewSetInfoHandler(gs)
