@@ -9,7 +9,10 @@ import (
 
 type SetInfoHandler struct {
 	Handler
-	nextCommand bottypes.Command
+
+	name    string
+	surname string
+	age     int
 }
 
 func NewSetInfoHandler(gs GlobalStater) *SetInfoHandler {
@@ -18,16 +21,12 @@ func NewSetInfoHandler(gs GlobalStater) *SetInfoHandler {
 	sh.gs = gs
 
 	sh.commands = map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error){
-		cmd.SetInfoStartCommand: {
-			sh.SetInfoStartHandler,
-		},
+		cmd.SetInfoStartCommand: {sh.SetInfoStartHandler},
 
-		// Не работает модификатор CommandBackable
 		cmd.SetNameCommand:    {sh.ModifyHandler(sh.SetNameHandler, []int{StateBackable})},
-		cmd.SetSurnameCommand: {sh.ModifyHandler(sh.SetSurnameHandler, []int{StateBackable})},
-		cmd.SetAgeCommand:     {sh.ModifyHandler(sh.SetAgeHandler, []int{StateBackable})},
+		cmd.SetSurnameCommand: {sh.ModifyHandler(sh.SetSurnameHandler, []int{CommandBackable})},
+		cmd.SetAgeCommand:     {sh.ModifyHandler(sh.SetAgeHandler, []int{CommandBackable})},
 		cmd.SetInfoEndCommand: {sh.SetInfoEndHandler},
-		cmd.AnyCommand:        {},
 	}
 
 	return sh
@@ -36,15 +35,8 @@ func NewSetInfoHandler(gs GlobalStater) *SetInfoHandler {
 func (handler *SetInfoHandler) Handle(params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
-	var commandToHandle bottypes.Command
+	handleFuncs, ok := handler.GetCommandFromMap(params.command)
 
-	if params.message.Command.IsCommand() {
-		commandToHandle = params.command
-	} else {
-		commandToHandle = handler.nextCommand
-	}
-
-	handleFuncs, ok := handler.GetCommandFromMap(commandToHandle)
 	if !ok {
 		panic("wrong handler")
 	}
@@ -64,9 +56,12 @@ func (handler *SetInfoHandler) SetInfoStartHandler(params HandlerParams) (Handle
 	var res HandlerResponse
 	chatID := params.message.Info.ChatID
 
+	handler.name = ""
+	handler.surname = ""
+	handler.age = 0
+
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Let me know you a bit closer"}
 	res.messages = append(res.messages, retMessage)
-	handler.nextCommand = cmd.SetNameCommand
 	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.SetNameCommand)
 	res.nextState = "info-state"
 
@@ -77,11 +72,13 @@ func (handler *SetInfoHandler) SetNameHandler(params HandlerParams) (HandlerResp
 	var res HandlerResponse
 	chatID := params.message.Info.ChatID
 
-	handler.nextCommand = cmd.SetSurnameCommand
-
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Enter your name"}
 	res.messages = append(res.messages, retMessage)
-	res.nextCommands = append(res.nextCommands, cmd.AnyCommand)
+	res.nextCommands = append(res.nextCommands, cmd.SetSurnameCommand)
+	res.nextCommandToParse = bottypes.ParseableCommand{
+		Command:   cmd.SetSurnameCommand,
+		ParseType: bottypes.AnyTextParse,
+	}
 
 	return res, nil
 }
@@ -90,13 +87,15 @@ func (handler *SetInfoHandler) SetSurnameHandler(params HandlerParams) (HandlerR
 	var res HandlerResponse
 	chatID := params.message.Info.ChatID
 
-	handler.gs.SetName(params.message.Info.Text)
-
-	handler.nextCommand = cmd.SetAgeCommand
+	handler.name = params.command.Data
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Enter your surname"}
 	res.messages = append(res.messages, retMessage)
-	res.nextCommands = append(res.nextCommands, cmd.AnyCommand)
+	res.nextCommands = append(res.nextCommands, cmd.SetAgeCommand)
+	res.nextCommandToParse = bottypes.ParseableCommand{
+		Command:   cmd.SetAgeCommand,
+		ParseType: bottypes.AnyTextParse,
+	}
 
 	return res, nil
 }
@@ -105,13 +104,15 @@ func (handler *SetInfoHandler) SetAgeHandler(params HandlerParams) (HandlerRespo
 	var res HandlerResponse
 	chatID := params.message.Info.ChatID
 
-	handler.gs.SetSurname(params.message.Info.Text)
-
-	handler.nextCommand = cmd.SetInfoEndCommand
+	handler.surname = params.command.Data
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "Enter your age"}
 	res.messages = append(res.messages, retMessage)
-	res.nextCommands = append(res.nextCommands, cmd.AnyCommand)
+	res.nextCommands = append(res.nextCommands, cmd.SetInfoEndCommand)
+	res.nextCommandToParse = bottypes.ParseableCommand{
+		Command:   cmd.SetInfoEndCommand,
+		ParseType: bottypes.AnyTextParse,
+	}
 
 	return res, nil
 }
@@ -120,19 +121,28 @@ func (handler *SetInfoHandler) SetInfoEndHandler(params HandlerParams) (HandlerR
 	var res HandlerResponse
 	chatID := params.message.Info.ChatID
 
-	age, err := strconv.Atoi(params.message.Info.Text)
+	age, err := strconv.Atoi(params.command.Data)
 
-	if err != nil {
+	if err != nil || age < 0 || age > 100 {
 		retMessage := bottypes.Message{ChatID: chatID, Text: "Wrong age, try again!"}
 		res.messages = append(res.messages, retMessage)
-		res.nextCommands = append(res.nextCommands, cmd.AnyCommand, cmd.BackStateCommand)
+		res.nextCommands = append(res.nextCommands, cmd.SetInfoEndCommand)
+		res.nextCommandToParse = bottypes.ParseableCommand{
+			Command:   cmd.SetInfoEndCommand,
+			ParseType: bottypes.AnyTextParse,
+		}
+
 		return res, nil
 	}
 
-	handler.gs.SetAge(age)
+	handler.age = age
 
 	retMessage := bottypes.Message{ChatID: chatID, Text: "My gratitude"}
 	res.messages = append(res.messages, retMessage)
+
+	handler.gs.SetName(handler.name)
+	handler.gs.SetSurname(handler.surname)
+	handler.gs.SetAge(handler.age)
 
 	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.ShowCommandsCommand)
 	res.nextState = "start-state"

@@ -183,7 +183,6 @@ func NewStateMachine() *StateMachine {
 		cmd.SetInfoEndCommand,
 		cmd.BackStateCommand,
 		cmd.BackCommandCommand,
-		cmd.AnyCommand,
 	)
 
 	checkboxState := NewState(
