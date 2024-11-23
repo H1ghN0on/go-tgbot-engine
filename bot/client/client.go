@@ -49,29 +49,39 @@ type Client struct {
 }
 
 func (client Client) parseCommand(message bottypes.Message) bottypes.Command {
-
 	command := bottypes.Command{
 		Command: message.Text,
 		Data:    "",
 	}
 
-	commandToParse := client.nextCommandToParse.Command
+	parseCommand := client.nextCommandToParse
 
-	if client.nextCommandToParse.Command.Command != "" {
+	if parseCommand.ParseType == bottypes.NoParse ||
+		parseCommand.Command.Command == "" {
+		return command
+	}
 
-		for _, exception := range client.nextCommandToParse.Exceptions {
-			if exception.Command == message.Text {
-				return command
-			}
+	for _, exception := range parseCommand.Exceptions {
+		if exception.Command == message.Text {
+			return command
 		}
+	}
 
-		if !strings.HasPrefix(message.Text, commandToParse.Command) {
+	if parseCommand.ParseType == bottypes.AnyTextParse {
+		command.Command = parseCommand.Command.Command
+		command.Data = message.Text
+		return command
+	}
+
+	if parseCommand.ParseType == bottypes.DynamicButtonParse {
+		if !strings.HasPrefix(message.Text, parseCommand.Command.Command) {
 			return command
 		}
 
-		data, _ := strings.CutPrefix(message.Text, commandToParse.Command)
-		command.Command = commandToParse.Command
+		data, _ := strings.CutPrefix(message.Text, parseCommand.Command.Command)
+		command.Command = parseCommand.Command.Command
 		command.Data = data
+		return command
 	}
 
 	return command
@@ -295,7 +305,7 @@ func (client *Client) setMyCommands(chatID int64, res []HandlerResponser) error 
 }
 
 func (client *Client) setNextCommandToParse(command bottypes.ParseableCommand) {
-	if command.Command.Command == "" {
+	if command.Command.Command == "" || command.ParseType == bottypes.NoParse {
 		client.nextCommandToParse = bottypes.ParseableCommand{}
 	} else {
 		logger.Client().Info("command", command.Command.Command, "will be parsed")
@@ -361,7 +371,6 @@ func (client *Client) HandleNewMessage(receivedMessage bottypes.Message) {
 				panic(err)
 			}
 		}
-
 		client.setNextCommandToParse(response.GetNextCommandToParse())
 	}
 

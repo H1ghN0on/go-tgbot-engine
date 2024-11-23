@@ -1,6 +1,17 @@
 package bottypes
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
+
+type ParseCommandType int
+
+const (
+	AnyTextParse       ParseCommandType = iota
+	DynamicButtonParse ParseCommandType = iota
+	NoParse            ParseCommandType = iota
+)
 
 type Button struct {
 	ChatID  int64
@@ -53,9 +64,16 @@ func (cmd Command) Equal(other Command) bool {
 	return cmd.Command == other.Command
 }
 
+func (cmd Command) InSlice(commands []Command) bool {
+	return slices.ContainsFunc(commands, func(command Command) bool {
+		return cmd.Equal(command)
+	})
+}
+
 type ParseableCommand struct {
 	Command    Command
 	Exceptions []Command
+	ParseType  ParseCommandType
 }
 
 const (

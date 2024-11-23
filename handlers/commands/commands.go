@@ -3,7 +3,6 @@ package commands
 import "github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 
 var NothingnessCommand bottypes.Command = bottypes.Command{Command: "/nothingness", Description: "Пустышка"}
-var AnyCommand bottypes.Command = bottypes.Command{Command: "/any", Description: "Любая команда"}
 
 // Back Handler
 var BackCommandCommand bottypes.Command = bottypes.Command{Command: "/back_command", Description: "Вернуться к предыдущей команде"}

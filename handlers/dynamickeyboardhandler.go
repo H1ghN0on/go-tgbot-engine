@@ -103,7 +103,8 @@ func (handler *DynamicKeyboardHandler) DynamicKeyboardFirstHandler(params Handle
 
 	res.messages = append(res.messages, retMessage)
 	res.nextCommandToParse = bottypes.ParseableCommand{
-		Command: cmd.DynamicKeyboardSecondStageCommand,
+		Command:   cmd.DynamicKeyboardSecondStageCommand,
+		ParseType: bottypes.DynamicButtonParse,
 	}
 
 	res.nextCommands = append(res.nextCommands, cmd.DynamicKeyboardSecondStageCommand)
@@ -140,7 +141,8 @@ func (handler *DynamicKeyboardHandler) DynamicKeyboardSecondHandler(params Handl
 
 	res.messages = append(res.messages, retMessage)
 	res.nextCommandToParse = bottypes.ParseableCommand{
-		Command: cmd.DynamicKeyboardFinishCommand,
+		Command:   cmd.DynamicKeyboardFinishCommand,
+		ParseType: bottypes.DynamicButtonParse,
 	}
 	res.nextCommands = append(res.nextCommands, cmd.DynamicKeyboardFinishCommand)
 
