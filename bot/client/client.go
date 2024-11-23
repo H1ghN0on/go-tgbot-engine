@@ -41,11 +41,11 @@ type CommandHandler interface {
 }
 
 type Client struct {
-	cmdhandler               CommandHandler
-	api                      *tgbotapi.BotAPI
-	lastMessage              bottypes.Message
-	messagesToRemove         []bottypes.Message
-	nextButtonCommandToParse bottypes.ParseableCommand
+	cmdhandler         CommandHandler
+	api                *tgbotapi.BotAPI
+	lastMessage        bottypes.Message
+	messagesToRemove   []bottypes.Message
+	nextCommandToParse bottypes.ParseableCommand
 }
 
 func (client Client) parseCommand(message bottypes.Message) bottypes.Command {
@@ -54,7 +54,7 @@ func (client Client) parseCommand(message bottypes.Message) bottypes.Command {
 		Data:    "",
 	}
 
-	parseCommand := client.nextButtonCommandToParse
+	parseCommand := client.nextCommandToParse
 
 	if parseCommand.ParseType == bottypes.NoParse ||
 		parseCommand.Command.Command == "" {
@@ -304,12 +304,12 @@ func (client *Client) setMyCommands(chatID int64, res []HandlerResponser) error 
 	return err
 }
 
-func (client *Client) setNextButtonCommandToParse(command bottypes.ParseableCommand) {
+func (client *Client) setNextCommandToParse(command bottypes.ParseableCommand) {
 	if command.Command.Command == "" || command.ParseType == bottypes.NoParse {
-		client.nextButtonCommandToParse = bottypes.ParseableCommand{}
+		client.nextCommandToParse = bottypes.ParseableCommand{}
 	} else {
 		logger.Client().Info("command", command.Command.Command, "will be parsed")
-		client.nextButtonCommandToParse = command
+		client.nextCommandToParse = command
 	}
 }
 
@@ -371,7 +371,7 @@ func (client *Client) HandleNewMessage(receivedMessage bottypes.Message) {
 				panic(err)
 			}
 		}
-		client.setNextButtonCommandToParse(response.GetNextCommandToParse())
+		client.setNextCommandToParse(response.GetNextCommandToParse())
 	}
 
 	err = client.setMyCommands(parsedMessage.Info.ChatID, handlerResult.GetResponses())
