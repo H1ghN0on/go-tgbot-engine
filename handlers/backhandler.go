@@ -27,7 +27,7 @@ func NewBackHandler(sm StateMachiner) *BackHandler {
 }
 
 func (handler *BackHandler) UpdateLastCommand(command bottypes.Command) {
-	if !command.Equal(cmd.BackStateCommand) && !command.Equal(cmd.BackCommandCommand) {
+	if !command.Equal(cmd.BackStateCommand) && !command.Equal(cmd.BackCommandCommand) && !command.Equal(cmd.NothingnessCommand) {
 		if len(handler.commandQueue) == 0 || command != handler.commandQueue[len(handler.commandQueue)-1] {
 			if len(handler.commandQueue) > command_queue_max_size {
 				handler.commandQueue = handler.commandQueue[1:]
