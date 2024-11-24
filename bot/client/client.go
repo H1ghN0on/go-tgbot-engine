@@ -8,6 +8,7 @@ import (
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -151,11 +152,12 @@ func (client *Client) PrepareKeyboard(message bottypes.Message) (tgbotapi.Inline
 		for _, buttonRow := range message.ButtonRows {
 			var buttons []tgbotapi.InlineKeyboardButton
 			for _, button := range buttonRow.Buttons {
-				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command+button.Data)))
+				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command+button.Command.Data)))
 			}
 			for _, button := range buttonRow.CheckboxButtons {
 				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command)))
 			}
+
 			buttonRows = append(buttonRows, buttons)
 		}
 
@@ -271,8 +273,8 @@ func (client *Client) removeMessagesByTrigger() error {
 
 	for _, v := range client.messagesToRemove {
 		msgToDelete := tgbotapi.DeleteMessageConfig{
-			ChatID:    v.ChatID,
 			MessageID: v.ID,
+			ChatID:    v.ChatID,
 		}
 		_, err := client.api.Request(msgToDelete)
 		if err != nil {

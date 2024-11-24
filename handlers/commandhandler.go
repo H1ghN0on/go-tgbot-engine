@@ -2,9 +2,12 @@ package handlers
 
 import (
 	"fmt"
+	"slices"
+	"time"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/client"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
 )
 
@@ -43,6 +46,9 @@ type GlobalStater interface {
 	SetName(name string)
 	SetSurname(surname string)
 	SetAge(age int)
+
+	GetScheduleFirst() []time.Time
+	GetScheduleSecond() []time.Time
 
 	GetDataForDynamicKeyboard() map[string][]string
 }
@@ -236,6 +242,22 @@ func (ch *CommandHandler) handleCommand(
 	return res, nil
 }
 
+func findCommandFromTheList(command bottypes.Command) (bottypes.Command, error) {
+	if command.Command == "" || !command.IsCommand() {
+		return bottypes.Command{}, fmt.Errorf("not command received")
+	}
+
+	index := slices.IndexFunc(cmd.Commands, func(com bottypes.Command) bool { return command.Equal(com) })
+	if index == -1 {
+		return bottypes.Command{}, fmt.Errorf("unknown command received")
+	}
+
+	trueCommand := cmd.Commands[index]
+	trueCommand.Data = command.Data
+
+	return trueCommand, nil
+}
+
 func (ch *CommandHandler) Handle(req client.CommandHandlerRequester) (client.CommandHandlerResponser, error) {
 
 	receivedMessage := req.GetMessage()
@@ -249,6 +271,13 @@ func (ch *CommandHandler) Handle(req client.CommandHandlerRequester) (client.Com
 		logger.CommandHandler().Critical(receivedMessage.Command.String(), "is not in state commands (", convertCommandsToString(ch.sm.GetActiveState().GetAvailableCommands()), ")")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available (not in state)"}
 	}
+
+	trueCommand, err := findCommandFromTheList(receivedMessage.Command)
+	if err != nil {
+		return CommandHandlerResponse{}, err
+	}
+
+	receivedMessage.Command = trueCommand
 
 	chRes, err := ch.handleCommand(receivedMessage.Command, receivedMessage, false)
 	if err != nil {
@@ -265,11 +294,12 @@ func NewCommandHandler(sm StateMachiner, gs GlobalStater) *CommandHandler {
 	}
 
 	setInfoHandler := NewSetInfoHandler(gs)
-	keyboardHandler := NewKeyboardhandler(gs)
+	keyboardHandler := NewKeyboardHandler(gs)
 	levelFourHandler := NewLevelFourHandler(gs)
 	startHandler := NewStartHandler(gs)
 	checkboxHandler := NewCheckboxHandler(gs)
-	dynamicKeyboardHandler := NewDynamicKeyboardhandler(gs)
+	dynamicKeyboardHandler := NewDynamicKeyboardHandler(gs)
+	calendarHandler := NewCalendarHandler(gs)
 	backHandler := NewBackHandler(gs, sm)
 
 	ch.handlers = append(ch.handlers,
@@ -279,6 +309,7 @@ func NewCommandHandler(sm StateMachiner, gs GlobalStater) *CommandHandler {
 		startHandler,
 		checkboxHandler,
 		dynamicKeyboardHandler,
+		calendarHandler,
 		backHandler)
 
 	ch.backHandler = backHandler

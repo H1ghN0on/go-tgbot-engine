@@ -14,7 +14,7 @@ type DynamicKeyboardHandler struct {
 	selectedItems []string
 }
 
-func NewDynamicKeyboardhandler(gs GlobalStater) *DynamicKeyboardHandler {
+func NewDynamicKeyboardHandler(gs GlobalStater) *DynamicKeyboardHandler {
 
 	h := &DynamicKeyboardHandler{}
 	h.gs = gs
@@ -96,7 +96,11 @@ func (handler *DynamicKeyboardHandler) DynamicKeyboardFirstHandler(params Handle
 	for _, text := range data["first_stage"] {
 		retMessage.ButtonRows = append(retMessage.ButtonRows, bottypes.ButtonRows{
 			Buttons: []bottypes.Button{
-				{ChatID: chatID, Text: text, Command: cmd.DynamicKeyboardSecondStageCommand, Data: text},
+				{ChatID: chatID, Text: text, Command: bottypes.Command{
+					Command:     cmd.DynamicKeyboardSecondStageCommand.Command,
+					Description: cmd.DynamicKeyboardSecondStageCommand.Description,
+					Data:        text,
+				}},
 			},
 		})
 	}
@@ -134,7 +138,11 @@ func (handler *DynamicKeyboardHandler) DynamicKeyboardSecondHandler(params Handl
 	for _, text := range data["second_stage"] {
 		retMessage.ButtonRows = append(retMessage.ButtonRows, bottypes.ButtonRows{
 			Buttons: []bottypes.Button{
-				{ChatID: chatID, Text: text, Command: cmd.DynamicKeyboardFinishCommand, Data: text},
+				{ChatID: chatID, Text: text, Command: bottypes.Command{
+					Command:     cmd.DynamicKeyboardFinishCommand.Command,
+					Description: cmd.DynamicKeyboardFinishCommand.Description,
+					Data:        text,
+				}},
 			},
 		})
 	}

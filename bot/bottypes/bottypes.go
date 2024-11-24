@@ -21,7 +21,6 @@ type Button struct {
 	ChatID  int64
 	Text    string
 	Command Command
-	Data    string
 }
 
 type CheckboxButton struct {
@@ -54,6 +53,7 @@ type Command struct {
 	Command     string
 	Description string
 	Data        string
+	SkipOnBack  bool
 }
 
 func (cmd Command) String() string {

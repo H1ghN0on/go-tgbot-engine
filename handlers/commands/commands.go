@@ -2,7 +2,7 @@ package commands
 
 import "github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 
-var NothingnessCommand bottypes.Command = bottypes.Command{Command: "/nothingness", Description: "Пустышка"}
+var NothingnessCommand bottypes.Command = bottypes.Command{Command: "/nothingness", Description: "Пустышка", SkipOnBack: true}
 
 // Back Handler
 var BackCommandCommand bottypes.Command = bottypes.Command{Command: "/back_command", Description: "Вернуться к предыдущей команде"}
@@ -49,3 +49,72 @@ var DynamicKeyboardStartCommand bottypes.Command = bottypes.Command{Command: "/d
 var DynamicKeyboardFirstStageCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_first_stage", Description: "Первая фаза динамической клавиатуры"}
 var DynamicKeyboardSecondStageCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_second_stage", Description: "Вторая фаза динамической клавиатуры"}
 var DynamicKeyboardFinishCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_finish", Description: "Завершение динамической клавиатуры"}
+
+// Calendar Handler
+var CalendarStartCommand bottypes.Command = bottypes.Command{Command: "/calendar_start", Description: "Запуск календаря"}
+var CalendarChooseCommand bottypes.Command = bottypes.Command{Command: "/calendar_choose", Description: "Выбор календаря"}
+var CalendarChooseFirstCommand bottypes.Command = bottypes.Command{Command: "/calendar_choose_first", Description: "Расписание 1", SkipOnBack: true}
+var CalendarChooseSecondCommand bottypes.Command = bottypes.Command{Command: "/calendar_choose_second", Description: "Расписание 2", SkipOnBack: true}
+var CalendarLaunchCommand bottypes.Command = bottypes.Command{Command: "/calendar_launch", Description: "Предлагает кнопку запуска календаря"}
+var CalendarNextMonthCommand bottypes.Command = bottypes.Command{Command: "/calendar_next_month", Description: "Следующий месяц", SkipOnBack: true}
+var CalendarPrevMonthCommand bottypes.Command = bottypes.Command{Command: "/calendar_prev_month", Description: "Предыдущий месяц", SkipOnBack: true}
+var CalendarNextYearCommand bottypes.Command = bottypes.Command{Command: "/calendar_next_year", Description: "Следующий год", SkipOnBack: true}
+var CalendarPrevYearCommand bottypes.Command = bottypes.Command{Command: "/calendar_prev_year", Description: "Следующий год", SkipOnBack: true}
+var CalendarSetDayCommand bottypes.Command = bottypes.Command{Command: "/calendar_set_day", Description: "Выбрать день"}
+var CalendarSetTimeCommand bottypes.Command = bottypes.Command{Command: "/calendar_set_time", Description: "Выбрать время"}
+var CalendarFinishCommand bottypes.Command = bottypes.Command{Command: "/calendar_finish", Description: "Закончить с календарем"}
+
+var Commands = []bottypes.Command{
+	NothingnessCommand,
+	BackCommandCommand,
+	BackStateCommand,
+
+	ShowCommandsCommand,
+	LevelOneCommand,
+	LevelTwoCommand,
+	LevelThreeCommand,
+	BigMessagesCommand,
+
+	CheckboxStartCommand,
+	CheckboxFirstCommand,
+	CheckboxSecondCommand,
+	CheckboxThirdCommand,
+	CheckboxFourthCommand,
+	CheckboxAcceptCommand,
+
+	SetInfoStartCommand,
+	SetNameCommand,
+	SetSurnameCommand,
+	SetAgeCommand,
+	SetInfoEndCommand,
+
+	KeyboardStartCommand,
+	KeyboardOneCommand,
+	KeyboardTwoCommand,
+	KeyboardThreeCommand,
+	KeyboardFinishCommand,
+
+	LevelFourStartCommand,
+	LevelFourOneCommand,
+	LevelFourTwoCommand,
+	LevelFourThreeCommand,
+	LevelFourFourCommand,
+
+	DynamicKeyboardStartCommand,
+	DynamicKeyboardFirstStageCommand,
+	DynamicKeyboardSecondStageCommand,
+	DynamicKeyboardFinishCommand,
+
+	CalendarStartCommand,
+	CalendarChooseCommand,
+	CalendarChooseFirstCommand,
+	CalendarChooseSecondCommand,
+	CalendarLaunchCommand,
+	CalendarNextMonthCommand,
+	CalendarPrevMonthCommand,
+	CalendarNextYearCommand,
+	CalendarPrevYearCommand,
+	CalendarSetDayCommand,
+	CalendarSetTimeCommand,
+	CalendarFinishCommand,
+}
