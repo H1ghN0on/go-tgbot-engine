@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/client"
@@ -43,6 +44,9 @@ type GlobalStater interface {
 	SetName(name string)
 	SetSurname(surname string)
 	SetAge(age int)
+
+	GetScheduleFirst() []time.Time
+	GetScheduleSecond() []time.Time
 
 	GetDataForDynamicKeyboard() map[string][]string
 }

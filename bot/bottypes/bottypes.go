@@ -21,7 +21,6 @@ type Button struct {
 	ChatID  int64
 	Text    string
 	Command Command
-	Data    string
 }
 
 type CheckboxButton struct {

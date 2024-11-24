@@ -52,4 +52,14 @@ var DynamicKeyboardFinishCommand bottypes.Command = bottypes.Command{Command: "/
 
 // Calendar Handler
 var CalendarStartCommand bottypes.Command = bottypes.Command{Command: "/calendar_start", Description: "Запуск календаря"}
+var CalendarChooseCommand bottypes.Command = bottypes.Command{Command: "/calendar_choose", Description: "Выбор календаря"}
+var CalendarChooseFirstCommand bottypes.Command = bottypes.Command{Command: "/calendar_choose_first", Description: "Расписание 1"}
+var CalendarChooseSecondCommand bottypes.Command = bottypes.Command{Command: "/calendar_choose_second", Description: "Расписание 2"}
 var CalendarLaunchCommand bottypes.Command = bottypes.Command{Command: "/calendar_launch", Description: "Предлагает кнопку запуска календаря"}
+var CalendarNextMonthCommand bottypes.Command = bottypes.Command{Command: "/calendar_next_month", Description: "Следующий месяц"}
+var CalendarPrevMonthCommand bottypes.Command = bottypes.Command{Command: "/calendar_prev_month", Description: "Предыдущий месяц"}
+var CalendarNextYearCommand bottypes.Command = bottypes.Command{Command: "/calendar_next_year", Description: "Следующий год"}
+var CalendarPrevYearCommand bottypes.Command = bottypes.Command{Command: "/calendar_prev_year", Description: "Следующий год"}
+var CalendarSetDayCommand bottypes.Command = bottypes.Command{Command: "/calendar_set_day", Description: "Выбрать день"}
+var CalendarSetTimeCommand bottypes.Command = bottypes.Command{Command: "/calendar_set_time", Description: "Выбрать время"}
+var CalendarFinishCommand bottypes.Command = bottypes.Command{Command: "/calendar_finish", Description: "Закончить с календарем"}

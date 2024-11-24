@@ -219,7 +219,19 @@ func NewStateMachine() *StateMachine {
 		cmd.CalendarStartCommand,
 
 		cmd.CalendarLaunchCommand,
+		cmd.CalendarChooseCommand,
+		cmd.CalendarChooseFirstCommand,
+		cmd.CalendarChooseSecondCommand,
+		cmd.CalendarNextMonthCommand,
+		cmd.CalendarPrevMonthCommand,
+		cmd.CalendarNextYearCommand,
+		cmd.CalendarPrevYearCommand,
+		cmd.CalendarSetDayCommand,
+		cmd.CalendarSetTimeCommand,
+		cmd.CalendarFinishCommand,
 		cmd.BackStateCommand,
+		cmd.BackCommandCommand,
+		cmd.NothingnessCommand,
 	)
 
 	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState, *startState, *dynamicKeyboardState, *calendarState)

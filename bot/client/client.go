@@ -151,7 +151,7 @@ func (client *Client) PrepareKeyboard(message bottypes.Message) (tgbotapi.Inline
 		for _, buttonRow := range message.ButtonRows {
 			var buttons []tgbotapi.InlineKeyboardButton
 			for _, button := range buttonRow.Buttons {
-				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command+button.Data)))
+				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command+button.Command.Data)))
 			}
 			for _, button := range buttonRow.CheckboxButtons {
 				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command)))
