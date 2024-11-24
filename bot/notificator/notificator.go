@@ -55,17 +55,6 @@ type Notificator struct {
 	timeoutCallback func(notification Notificationer)
 }
 
-// func (nf *Notificator) SetTimeout(timeoutSec int) {
-
-// 	nf.timeoutSec = timeoutSec
-
-// 	if nf.isTicking {
-// 		nf.tickerData.ticker.Reset(time.Duration(nf.timeoutSec * int(time.Second)))
-// 	}
-
-// 	logger.Notificator().Info("notifictor timeout updated", fmt.Sprint(nf.timeoutSec), "seconds")
-// }
-
 func (nf *Notificator) startTimer(ticker *TickerData, notification Notificationer) {
 	if ticker.isTicking {
 		return

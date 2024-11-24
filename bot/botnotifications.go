@@ -20,7 +20,7 @@ func (bot Bot) TimeNotification() []bottypes.Message {
 	return messages
 }
 
-func (bot Bot) RandomNumberNotification() []bottypes.Message {
+func (bot Bot) RandomTrackNotification() []bottypes.Message {
 	var messages []bottypes.Message
 
 	var tracks = []string{"Wire", "Senior Grang Botanist", "Ehiztaria", "Inbred Basilisk", "The Abhorrence", "The Legionary", "Silent Scream"}

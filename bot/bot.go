@@ -23,14 +23,7 @@ func (err BotError) Error() string {
 	return err.message
 }
 
-type Notificationer interface {
-	GetMessages() []bottypes.Message
-	GetUsers() []bottypes.User
-	GetTimeoutSec() int
-}
-
 type Notificator interface {
-	// SetTimeout(timeoutSec int)
 	Start()
 	Stop()
 }
@@ -87,8 +80,14 @@ func (bot *Bot) ListenMessages() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	updates := bot.api.GetUpdatesChan(u)
-	bot.staticNotificator.Start()
-	bot.dynamicNotificator.Start()
+
+	if bot.staticNotificator != nil {
+		bot.staticNotificator.Start()
+	}
+
+	if bot.dynamicNotificator != nil {
+		bot.dynamicNotificator.Start()
+	}
 
 	logger.Bot().Info("listening messsages")
 
@@ -148,7 +147,7 @@ func NewBot(api *tgbotapi.BotAPI, gs *globalstate.GlobalState) *Bot {
 	bot.staticNotificator = notificator.NewStaticNotificator([]notificator.StaticNotification{*notification, *notification2}, bot.notificationHandler)
 
 	dynamicNotification := notificator.NewDynamicNotification(bot.TimeNotification, bot.OnlyMe, 5)
-	dynamicNotification2 := notificator.NewDynamicNotification(bot.RandomNumberNotification, bot.AllConnectedUsers, 10)
+	dynamicNotification2 := notificator.NewDynamicNotification(bot.RandomTrackNotification, bot.AllConnectedUsers, 10)
 	bot.dynamicNotificator = notificator.NewDynamicNotificator([]notificator.DynamicNotification{*dynamicNotification, *dynamicNotification2}, bot.notificationHandler)
 
 	return bot
