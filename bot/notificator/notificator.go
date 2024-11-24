@@ -74,7 +74,6 @@ func (nf *Notificator) startTimer(ticker *TickerData, notification Notificatione
 			case <-ticker.done:
 				logger.Notificator().Info("done written")
 			case <-ticker.ticker.C:
-				logger.Notificator().Info("timer handled")
 				nf.timeoutCallback(notification)
 			}
 		}
@@ -92,7 +91,7 @@ func (nf *Notificator) stopTimer(ticker *TickerData) {
 }
 
 func (nf *Notificator) Start() {
-	logger.Notificator().Info("Starting all notifications")
+	logger.Notificator().Info("starting all notifications")
 
 	for key, notification := range nf.notifications {
 		nf.startTimer(key, notification)
@@ -100,7 +99,7 @@ func (nf *Notificator) Start() {
 }
 
 func (nf *Notificator) Stop() {
-	logger.Notificator().Info("Stopping all notifications")
+	logger.Notificator().Info("stopping all notifications")
 
 	for key := range nf.notifications {
 		nf.stopTimer(key)
@@ -129,22 +128,7 @@ func NewDynamicNotification(messages func() []bottypes.Message, users func() []b
 	}
 }
 
-func NewStaticNotificator(notifications []StaticNotification, cb func(Notificationer)) *Notificator {
-
-	notificationMap := make(map[*TickerData]Notificationer)
-
-	for _, notification := range notifications {
-		ticker := &TickerData{}
-		notificationMap[ticker] = notification
-	}
-
-	return &Notificator{
-		timeoutCallback: cb,
-		notifications:   notificationMap,
-	}
-}
-
-func NewDynamicNotificator(notifications []DynamicNotification, cb func(Notificationer)) *Notificator {
+func NewNotificator(notifications []Notificationer, cb func(Notificationer)) *Notificator {
 
 	notificationMap := make(map[*TickerData]Notificationer)
 

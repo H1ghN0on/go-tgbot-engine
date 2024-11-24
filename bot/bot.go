@@ -15,6 +15,8 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+var shouldUseNotifications bool = true
+
 type BotError struct {
 	message string
 }
@@ -29,11 +31,10 @@ type Notificator interface {
 }
 
 type Bot struct {
-	api                *tgbotapi.BotAPI
-	clients            map[int64]*client.Client
-	gs                 *globalstate.GlobalState
-	staticNotificator  Notificator
-	dynamicNotificator Notificator
+	api         *tgbotapi.BotAPI
+	clients     map[int64]*client.Client
+	gs          *globalstate.GlobalState
+	notificator Notificator
 }
 
 func (client *Bot) parseMessage(update tgbotapi.Update) (bottypes.Message, int64, error) {
@@ -81,12 +82,8 @@ func (bot *Bot) ListenMessages() {
 	u.Timeout = 60
 	updates := bot.api.GetUpdatesChan(u)
 
-	if bot.staticNotificator != nil {
-		bot.staticNotificator.Start()
-	}
-
-	if bot.dynamicNotificator != nil {
-		bot.dynamicNotificator.Start()
+	if bot.notificator != nil {
+		bot.notificator.Start()
 	}
 
 	logger.Bot().Info("listening messsages")
@@ -120,9 +117,13 @@ func (bot *Bot) ListenMessages() {
 }
 
 func (bot *Bot) notificationHandler(notification notificator.Notificationer) {
-	logger.Bot().Info("Notification timeout")
+	logger.Bot().Info(
+		"notification timeout, sending",
+		fmt.Sprint(len(notification.GetMessages())),
+		"messages to", fmt.Sprint(len(notification.GetUsers())),
+		"users")
 
-	if len(notification.GetMessages()) == 0 {
+	if len(notification.GetMessages()) == 0 || len(notification.GetUsers()) == 0 {
 		return
 	}
 
@@ -142,13 +143,17 @@ func NewBot(api *tgbotapi.BotAPI, gs *globalstate.GlobalState) *Bot {
 
 	bot.clients = make(map[int64]*client.Client)
 
-	notification := notificator.NewStaticNotification([]bottypes.Message{{Text: "Ravevenge"}}, bot.OnlyMe, 5)
-	notification2 := notificator.NewStaticNotification([]bottypes.Message{{Text: "Crypteque"}}, bot.AllConnectedUsers, 10)
-	bot.staticNotificator = notificator.NewStaticNotificator([]notificator.StaticNotification{*notification, *notification2}, bot.notificationHandler)
+	if shouldUseNotifications {
+		notification := notificator.NewStaticNotification([]bottypes.Message{{Text: "Ravevenge"}, {Text: "Glass Cages"}}, bot.OnlyMe, 5)
+		notification2 := notificator.NewStaticNotification([]bottypes.Message{{Text: "Crypteque"}}, bot.AllConnectedUsers, 10)
 
-	dynamicNotification := notificator.NewDynamicNotification(bot.TimeNotification, bot.OnlyMe, 5)
-	dynamicNotification2 := notificator.NewDynamicNotification(bot.RandomTrackNotification, bot.AllConnectedUsers, 10)
-	bot.dynamicNotificator = notificator.NewDynamicNotificator([]notificator.DynamicNotification{*dynamicNotification, *dynamicNotification2}, bot.notificationHandler)
+		dynamicNotification := notificator.NewDynamicNotification(bot.TimeNotification, bot.OnlyMe, 5)
+		dynamicNotification2 := notificator.NewDynamicNotification(bot.RandomTrackNotification, bot.AllConnectedUsers, 10)
+
+		bot.notificator = notificator.NewNotificator(
+			[]notificator.Notificationer{*notification, *notification2, *dynamicNotification, *dynamicNotification2},
+			bot.notificationHandler)
+	}
 
 	return bot
 }
