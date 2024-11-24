@@ -43,9 +43,14 @@ type CommandHandler interface {
 type Client struct {
 	cmdhandler         CommandHandler
 	api                *tgbotapi.BotAPI
+	chatID             int64
 	lastMessage        bottypes.Message
 	messagesToRemove   []bottypes.Message
 	nextCommandToParse bottypes.ParseableCommand
+}
+
+func (client Client) GetUserID() int64 {
+	return client.chatID
 }
 
 func (client Client) parseCommand(message bottypes.Message) bottypes.Command {
@@ -191,7 +196,7 @@ func (client *Client) SendKeyboard(message bottypes.Message) error {
 
 func (client *Client) SendText(message bottypes.Message) error {
 
-	msg := tgbotapi.NewMessage(message.ChatID, message.Text)
+	msg := tgbotapi.NewMessage(client.chatID, message.Text)
 
 	sent, err := client.api.Send(msg)
 	if err != nil {
@@ -210,7 +215,7 @@ func (client *Client) SendText(message bottypes.Message) error {
 
 func (client *Client) SendMessage(message bottypes.Message) error {
 
-	msg := tgbotapi.NewMessage(message.ChatID, message.Text)
+	msg := tgbotapi.NewMessage(client.chatID, message.Text)
 	keyboard, exists := client.PrepareKeyboard(message)
 	if exists {
 		msg.ReplyMarkup = keyboard
@@ -380,9 +385,10 @@ func (client *Client) HandleNewMessage(receivedMessage bottypes.Message) {
 	}
 }
 
-func NewClient(api *tgbotapi.BotAPI, ch CommandHandler) *Client {
+func NewClient(api *tgbotapi.BotAPI, ch CommandHandler, chatID int64) *Client {
 	return &Client{
 		api:        api,
 		cmdhandler: ch,
+		chatID:     chatID,
 	}
 }

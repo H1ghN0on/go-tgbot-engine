@@ -23,3 +23,9 @@ func StateMachine() *Logger {
 	logger.category = "StateMachine"
 	return logger
 }
+
+func Notificator() *Logger {
+	logger := GlobalLogger
+	logger.category = "Notificator"
+	return logger
+}
