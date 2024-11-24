@@ -14,7 +14,7 @@ type DynamicKeyboardHandler struct {
 	selectedItems []string
 }
 
-func NewDynamicKeyboardhandler(gs GlobalStater) *DynamicKeyboardHandler {
+func NewDynamicKeyboardHandler(gs GlobalStater) *DynamicKeyboardHandler {
 
 	h := &DynamicKeyboardHandler{}
 	h.gs = gs

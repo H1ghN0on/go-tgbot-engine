@@ -15,11 +15,11 @@ func NewStartHandler(gs GlobalStater) *StartHandler {
 	h.gs = gs
 
 	h.commands = map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error){
-		cmd.ShowCommandsCommand: {h.ShowCommandsHandler},
-		cmd.LevelOneCommand:     {h.LevelOneHandler},
-		cmd.LevelTwoCommand:     {h.LevelTwoHandler},
-		cmd.LevelThreeCommand:   {h.LevelThreeHandler},
-		cmd.BigMessagesCommand:  {h.BigMessagesHandler},
+		cmd.ShowCommandsCommand: {h.ModifyHandler(h.ShowCommandsHandler, []int{RemovableByTrigger})},
+		cmd.LevelOneCommand:     {h.ModifyHandler(h.LevelOneHandler, []int{RemoveTriggerer})},
+		cmd.LevelTwoCommand:     {h.ModifyHandler(h.LevelTwoHandler, []int{RemoveTriggerer})},
+		cmd.LevelThreeCommand:   {h.ModifyHandler(h.LevelThreeHandler, []int{RemoveTriggerer})},
+		cmd.BigMessagesCommand:  {h.ModifyHandler(h.BigMessagesHandler, []int{RemoveTriggerer})},
 	}
 
 	return h
@@ -126,7 +126,13 @@ func (handler *StartHandler) ShowCommandsHandler(params HandlerParams) (HandlerR
 		},
 	}
 
-	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3, buttonRow4, buttonRow5, buttonRow6, buttonRow7)
+	buttonRow8 := bottypes.ButtonRows{
+		Buttons: []bottypes.Button{
+			{ChatID: chatID, Text: "Calendar", Command: cmd.CalendarStartCommand},
+		},
+	}
+
+	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3, buttonRow4, buttonRow5, buttonRow6, buttonRow7, buttonRow8)
 
 	res.messages = append(res.messages, retMessage)
 

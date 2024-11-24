@@ -9,7 +9,7 @@ type KeyboardHandler struct {
 	Handler
 }
 
-func NewKeyboardhandler(gs GlobalStater) *KeyboardHandler {
+func NewKeyboardHandler(gs GlobalStater) *KeyboardHandler {
 
 	h := &KeyboardHandler{}
 	h.gs = gs

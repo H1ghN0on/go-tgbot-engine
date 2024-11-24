@@ -49,3 +49,7 @@ var DynamicKeyboardStartCommand bottypes.Command = bottypes.Command{Command: "/d
 var DynamicKeyboardFirstStageCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_first_stage", Description: "Первая фаза динамической клавиатуры"}
 var DynamicKeyboardSecondStageCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_second_stage", Description: "Вторая фаза динамической клавиатуры"}
 var DynamicKeyboardFinishCommand bottypes.Command = bottypes.Command{Command: "/dynamic_keyboard_finish", Description: "Завершение динамической клавиатуры"}
+
+// Calendar Handler
+var CalendarStartCommand bottypes.Command = bottypes.Command{Command: "/calendar_start", Description: "Запуск календаря"}
+var CalendarLaunchCommand bottypes.Command = bottypes.Command{Command: "/calendar_launch", Description: "Предлагает кнопку запуска календаря"}

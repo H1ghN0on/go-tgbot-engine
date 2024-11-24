@@ -156,6 +156,7 @@ func (client *Client) PrepareKeyboard(message bottypes.Message) (tgbotapi.Inline
 			for _, button := range buttonRow.CheckboxButtons {
 				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command)))
 			}
+
 			buttonRows = append(buttonRows, buttons)
 		}
 
@@ -271,8 +272,8 @@ func (client *Client) removeMessagesByTrigger() error {
 
 	for _, v := range client.messagesToRemove {
 		msgToDelete := tgbotapi.DeleteMessageConfig{
-			ChatID:    v.ChatID,
 			MessageID: v.ID,
+			ChatID:    v.ChatID,
 		}
 		_, err := client.api.Request(msgToDelete)
 		if err != nil {

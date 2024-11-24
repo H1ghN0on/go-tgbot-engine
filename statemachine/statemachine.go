@@ -142,6 +142,7 @@ func NewStateMachine() *StateMachine {
 		cmd.SetInfoStartCommand,
 		cmd.CheckboxStartCommand,
 		cmd.DynamicKeyboardStartCommand,
+		cmd.CalendarStartCommand,
 	)
 
 	levelFourState := NewState(
@@ -212,16 +213,26 @@ func NewStateMachine() *StateMachine {
 		cmd.BackCommandCommand,
 	)
 
-	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState, *startState, *dynamicKeyboardState)
+	calendarState := NewState(
+		"calendar-state",
+
+		cmd.CalendarStartCommand,
+
+		cmd.CalendarLaunchCommand,
+		cmd.BackStateCommand,
+	)
+
+	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState, *startState, *dynamicKeyboardState, *calendarState)
 	levelFourState.SetAvailableStates(*startState)
 	keyboardState.SetAvailableStates(*startState)
-	infoState.SetAvailableStates((*startState))
-	checkboxState.SetAvailableStates((*startState))
-	dynamicKeyboardState.SetAvailableStates((*startState))
+	infoState.SetAvailableStates(*startState)
+	checkboxState.SetAvailableStates(*startState)
+	dynamicKeyboardState.SetAvailableStates(*startState)
+	calendarState.SetAvailableStates(*startState)
 
 	sm := &StateMachine{}
 
-	sm.AddStates(*startState, *levelFourState, *keyboardState, *infoState, *checkboxState, *dynamicKeyboardState)
+	sm.AddStates(*startState, *levelFourState, *keyboardState, *infoState, *checkboxState, *dynamicKeyboardState, *calendarState)
 
 	err := sm.SetStateByName("start-state")
 	if err != nil {
