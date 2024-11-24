@@ -112,7 +112,9 @@ func (bot *Bot) ListenMessages() {
 			bot.clients[receivedMessage.ChatID] = activeClient
 		}
 
-		activeClient.HandleNewMessage(receivedMessage)
+		go func() {
+			activeClient.HandleNewMessage(receivedMessage)
+		}()
 	}
 }
 

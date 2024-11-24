@@ -11,13 +11,20 @@ import (
 	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
 )
 
+var next_month_symbol = ">"
+var prev_month_symbol = "<"
+var next_year_symbol = ">>"
+var prev_year_symbol = "<<"
+var empty_symbol = " "
+var date_time_format = "2006-01-02 15:04"
+var date_format = "2006-01-02"
+var time_format = "15:04"
+
 type CalendarHandler struct {
 	Handler
 
-	currentMonth time.Month
-	currentYear  int
-
-	chosenDate time.Time
+	currentTime time.Time
+	chosenDate  time.Time
 
 	availableTime []time.Time
 }
@@ -87,14 +94,7 @@ func (handler *CalendarHandler) CalendarStartHandler(params HandlerParams) (Hand
 	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.CalendarChooseCommand)
 	res.nextState = "calendar-state"
 
-	handler.currentMonth = time.Now().Month()
-	if handler.currentMonth == time.December {
-		handler.currentMonth = time.January
-		handler.currentYear++
-	} else {
-		handler.currentMonth++
-	}
-	handler.currentYear = time.Now().Year()
+	handler.currentTime = time.Now()
 
 	return res, nil
 }
@@ -166,28 +166,22 @@ func (handler *CalendarHandler) CalendarLaunchHandler(params HandlerParams) (Han
 				button.Text = " "
 			}
 
+			if button.Text == next_year_symbol {
+				button.Command = cmd.CalendarNextYearCommand
+			} else if button.Text == prev_year_symbol {
+				button.Command = cmd.CalendarPrevYearCommand
+			} else if button.Text == next_month_symbol {
+				button.Command = cmd.CalendarNextMonthCommand
+			} else if button.Text == prev_month_symbol {
+				button.Command = cmd.CalendarPrevMonthCommand
+			}
+
 			currentDay, err := strconv.Atoi(button.Text)
 
 			if err == nil {
 				button.Command = cmd.CalendarSetDayCommand
-				t := time.Date(handler.currentYear, handler.currentMonth-1, currentDay, 0, 0, 0, 0, time.UTC)
-				button.Command.Data = t.Format("2006-01-02")
-			}
-
-			if button.Text == ">>" {
-				button.Command = cmd.CalendarNextYearCommand
-			}
-
-			if button.Text == "<<" {
-				button.Command = cmd.CalendarPrevYearCommand
-			}
-
-			if button.Text == ">" {
-				button.Command = cmd.CalendarNextMonthCommand
-			}
-
-			if button.Text == "<" {
-				button.Command = cmd.CalendarPrevMonthCommand
+				t := time.Date(handler.currentTime.Year(), handler.currentTime.Month(), currentDay, 0, 0, 0, 0, time.UTC)
+				button.Command.Data = t.Format(date_format)
 			}
 
 			buttonRow.Buttons = append(buttonRow.Buttons, button)
@@ -225,13 +219,7 @@ func (handler *CalendarHandler) CalendarLaunchHandler(params HandlerParams) (Han
 func (handler *CalendarHandler) CalendarNextMonthHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	if handler.currentMonth == time.December {
-		handler.currentMonth = time.January
-		handler.currentYear++
-	} else {
-		handler.currentMonth++
-	}
-
+	handler.currentTime = handler.currentTime.AddDate(0, 1, 0)
 	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.CalendarLaunchCommand)
 
 	return res, nil
@@ -240,13 +228,7 @@ func (handler *CalendarHandler) CalendarNextMonthHandler(params HandlerParams) (
 func (handler *CalendarHandler) CalendarPrevMonthHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	if handler.currentMonth == time.January {
-		handler.currentMonth = time.December
-		handler.currentYear--
-	} else {
-		handler.currentMonth--
-	}
-
+	handler.currentTime = handler.currentTime.AddDate(0, -1, 0)
 	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.CalendarLaunchCommand)
 
 	return res, nil
@@ -255,8 +237,7 @@ func (handler *CalendarHandler) CalendarPrevMonthHandler(params HandlerParams) (
 func (handler *CalendarHandler) CalendarNextYearHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	handler.currentYear++
-
+	handler.currentTime = handler.currentTime.AddDate(1, 0, 0)
 	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.CalendarLaunchCommand)
 
 	return res, nil
@@ -265,8 +246,7 @@ func (handler *CalendarHandler) CalendarNextYearHandler(params HandlerParams) (H
 func (handler *CalendarHandler) CalendarPrevYearHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	handler.currentYear--
-
+	handler.currentTime = handler.currentTime.AddDate(-1, 0, 0)
 	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.CalendarLaunchCommand)
 
 	return res, nil
@@ -275,7 +255,7 @@ func (handler *CalendarHandler) CalendarPrevYearHandler(params HandlerParams) (H
 func (handler *CalendarHandler) CalendarSetDayHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	date, err := time.Parse("2006-01-02", params.command.Data)
+	date, err := time.Parse(date_format, params.command.Data)
 	if err != nil {
 		panic(err)
 	}
@@ -288,8 +268,8 @@ func (handler *CalendarHandler) CalendarSetDayHandler(params HandlerParams) (Han
 
 	var buttons []bottypes.ButtonRows
 	for _, time := range handler.availableTime {
-		if dateEqual(time, date) {
-			dateString := time.Format("15:04")
+		if dateEqualByDay(time, date) {
+			dateString := time.Format(time_format)
 			buttons = append(buttons, bottypes.ButtonRows{
 				Buttons: []bottypes.Button{
 					{
@@ -322,7 +302,7 @@ func (handler *CalendarHandler) CalendarSetDayHandler(params HandlerParams) (Han
 func (handler *CalendarHandler) CalendarSetTimeHandler(params HandlerParams) (HandlerResponse, error) {
 	var res HandlerResponse
 
-	date, err := time.Parse("15:04", params.command.Data)
+	date, err := time.Parse(time_format, params.command.Data)
 	if err != nil {
 		panic(err)
 	}
@@ -331,7 +311,7 @@ func (handler *CalendarHandler) CalendarSetTimeHandler(params HandlerParams) (Ha
 		time.Hour*time.Duration(date.Hour()) + time.Minute*time.Duration(date.Minute()))
 
 	res.messages = append(res.messages, bottypes.Message{
-		Text:   "You have chosen " + handler.chosenDate.Format("2006-01-02 15:04"),
+		Text:   "You have chosen " + handler.chosenDate.Format(date_time_format),
 		ChatID: params.message.Info.ChatID,
 	})
 
@@ -355,7 +335,7 @@ var daysOfWeek []string = []string{"MO", "TU", "WE", "TH", "FR", "SA", "SU"}
 func (handler CalendarHandler) buildCalendar() [][]string {
 	var data [][]string
 
-	var date = time.Date(handler.currentYear, handler.currentMonth, 0, 0, 0, 0, 0, time.UTC)
+	var date = handler.currentTime
 
 	data = append(data, buildYear(date))
 	data = append(data, buildDaysOfWeek())
@@ -366,10 +346,10 @@ func (handler CalendarHandler) buildCalendar() [][]string {
 }
 
 func buildYear(t time.Time) []string {
-	if t.Month() < 1 || t.Month() > 12 {
+	if t.Month() < time.January || t.Month() > time.December {
 		panic("wrong month")
 	}
-	return []string{"<<", months[t.Month()-1] + " " + fmt.Sprint(t.Year()), ">>"}
+	return []string{prev_year_symbol, months[t.Month()-1] + empty_symbol + fmt.Sprint(t.Year()), next_year_symbol}
 }
 
 func buildDaysOfWeek() []string {
@@ -399,11 +379,11 @@ func rangeCurrentMonth(t time.Time) func() time.Time {
 
 func hasTimeDayInSlice(t time.Time, availableTime []time.Time) bool {
 	return slices.ContainsFunc(availableTime, func(timeOfDay time.Time) bool {
-		return dateEqual(timeOfDay, t)
+		return dateEqualByDay(timeOfDay, t)
 	})
 }
 
-func dateEqual(t time.Time, other time.Time) bool {
+func dateEqualByDay(t time.Time, other time.Time) bool {
 	return other.Day() == t.Day() &&
 		other.Month() == t.Month() &&
 		other.Year() == t.Year()
@@ -422,22 +402,21 @@ func buildWeeks(t time.Time, availableTime []time.Time) [][]string {
 
 		weekday := date.Weekday()
 
-		if weekday == time.Sunday {
-			if hasTimeDayInSlice(date, availableTime) {
-				weeks[currentWeek][getCorrectWeekday(weekday)] = fmt.Sprint(date.Day())
-			}
-
-			weeks = append(weeks, make([]string, 7))
-			currentWeek++
-			continue
-		}
-
 		if hasTimeDayInSlice(date, availableTime) {
 			weeks[currentWeek][getCorrectWeekday(weekday)] = fmt.Sprint(date.Day())
+		}
+
+		if weekday == time.Sunday {
+			weeks = append(weeks, make([]string, 7))
+			currentWeek++
 		}
 	}
 
 	return weeks
+}
+
+func buildFooter() []string {
+	return []string{prev_month_symbol, empty_symbol, next_month_symbol}
 }
 
 func getCorrectWeekday(weekday time.Weekday) time.Weekday {
@@ -446,8 +425,4 @@ func getCorrectWeekday(weekday time.Weekday) time.Weekday {
 	}
 
 	return weekday - 1
-}
-
-func buildFooter() []string {
-	return []string{"<", "", ">"}
 }
