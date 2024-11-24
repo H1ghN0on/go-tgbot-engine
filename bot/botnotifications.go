@@ -7,25 +7,28 @@ import (
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 )
 
-/* Notification messages */
-
 type UserNotificationType int
 
 const (
 	OnlyMe            UserNotificationType = iota
+	OnlyStorm         UserNotificationType = iota
 	AllConnectedUsers UserNotificationType = iota
 )
 
 func (bot Bot) ChooseUserNotificator(nfType UserNotificationType) func() []bottypes.User {
 	switch nfType {
 	case OnlyMe:
-		return bot.GetAllConnectedUsers()
-	case AllConnectedUsers:
 		return bot.GetOnlyMe()
+	case OnlyStorm:
+		return bot.GetOnlyStorm()
+	case AllConnectedUsers:
+		return bot.GetAllConnectedUsers()
 	}
 
 	panic("unknown notificator")
 }
+
+/* Notification messages */
 
 func (bot Bot) TimeNotification() []bottypes.Message {
 	var messages []bottypes.Message
@@ -74,6 +77,16 @@ func (bot Bot) GetOnlyMe() func() []bottypes.User {
 		var users []bottypes.User
 		users = append(users, bottypes.User{
 			UserID: 872451555,
+		})
+		return users
+	}
+}
+
+func (bot Bot) GetOnlyStorm() func() []bottypes.User {
+	return func() []bottypes.User {
+		var users []bottypes.User
+		users = append(users, bottypes.User{
+			UserID: 375899544,
 		})
 		return users
 	}
