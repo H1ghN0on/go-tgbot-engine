@@ -80,8 +80,18 @@ func (handler *BackHandler) BackCommandHandler(params HandlerParams) (HandlerRes
 		return HandlerResponse{}, HandlerResponseError{message: "cannot return to previous command"}
 	}
 
-	currentCommand := handler.commandQueue[len(handler.commandQueue)-2]
-	handler.commandQueue = handler.commandQueue[:len(handler.commandQueue)-1]
+	lastCommand := handler.commandQueue[len(handler.commandQueue)-1]
+	currentCommand := lastCommand
+
+	for currentCommand.SkipOnBack || currentCommand.Equal(lastCommand) {
+		handler.commandQueue = handler.commandQueue[:len(handler.commandQueue)-1]
+
+		if len(handler.commandQueue) < 1 {
+			return HandlerResponse{}, HandlerResponseError{message: "cannot return to previous command"}
+		}
+
+		currentCommand = handler.commandQueue[len(handler.commandQueue)-1]
+	}
 
 	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, currentCommand)
 	res.postCommandsHandle.isBackCommand = true

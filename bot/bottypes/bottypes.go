@@ -53,6 +53,7 @@ type Command struct {
 	Command     string
 	Description string
 	Data        string
+	SkipOnBack  bool
 }
 
 func (cmd Command) String() string {

@@ -37,7 +37,7 @@ func NewCalendarHandler(gs GlobalStater) *CalendarHandler {
 		cmd.CalendarPrevMonthCommand:    {h.ModifyHandler(h.CalendarPrevMonthHandler, []int{})},
 		cmd.CalendarNextYearCommand:     {h.ModifyHandler(h.CalendarNextYearHandler, []int{})},
 		cmd.CalendarPrevYearCommand:     {h.ModifyHandler(h.CalendarPrevYearHandler, []int{})},
-		cmd.CalendarSetDayCommand:       {h.ModifyHandler(h.CalendarSetDayHandler, []int{KeyboardStarter})},
+		cmd.CalendarSetDayCommand:       {h.ModifyHandler(h.CalendarSetDayHandler, []int{KeyboardStarter, CommandBackable, RemovableByTrigger})},
 		cmd.CalendarSetTimeCommand:      {h.ModifyHandler(h.CalendarSetTimeHandler, []int{KeyboardStarter})},
 		cmd.CalendarFinishCommand:       {h.ModifyHandler(h.CalendarFinishHandler, []int{KeyboardStopper, RemoveTriggerer})},
 	}
@@ -62,6 +62,23 @@ func (handler *CalendarHandler) Handle(params HandlerParams) ([]HandlerResponse,
 	}
 
 	return res, nil
+}
+
+func (handler *CalendarHandler) HandleBackCommand(params HandlerParams) ([]HandlerResponse, error) {
+	var response []HandlerResponse
+
+	var res HandlerResponse
+
+	if params.command.Equal(cmd.CalendarChooseCommand) {
+		handler.availableTime = nil
+	}
+
+	if params.command.Equal(cmd.CalendarLaunchCommand) {
+		handler.chosenDate = time.Time{}
+	}
+
+	response = append(response, res)
+	return response, nil
 }
 
 func (handler *CalendarHandler) CalendarStartHandler(params HandlerParams) (HandlerResponse, error) {
@@ -105,7 +122,7 @@ func (handler *CalendarHandler) CalendarChooseHandler(params HandlerParams) (Han
 		},
 	})
 
-	res.nextCommands = append(res.nextCommands, cmd.CalendarChooseCommand, cmd.CalendarChooseSecondCommand)
+	res.nextCommands = append(res.nextCommands, cmd.CalendarChooseFirstCommand, cmd.CalendarChooseSecondCommand)
 
 	return res, nil
 }
