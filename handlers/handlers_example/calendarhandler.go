@@ -1,4 +1,4 @@
-package handlers
+package handlers_example
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	"github.com/H1ghN0on/go-tgbot-engine/handlers"
 	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
 )
 
@@ -29,33 +30,33 @@ type CalendarHandler struct {
 	availableTime []time.Time
 }
 
-func NewCalendarHandler(gs GlobalStater) *CalendarHandler {
+func NewCalendarHandler(gs ExampleGlobalStater) *CalendarHandler {
 
 	h := &CalendarHandler{}
 	h.gs = gs
 
-	h.commands = map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error){
+	h.Commands = map[bottypes.Command][]func(params handlers.HandlerParams) (handlers.HandlerResponse, error){
 		cmd.CalendarStartCommand:        {h.ModifyHandler(h.CalendarStartHandler, []int{})},
-		cmd.CalendarChooseCommand:       {h.ModifyHandler(h.CalendarChooseHandler, []int{KeyboardStarter, StateBackable})},
+		cmd.CalendarChooseCommand:       {h.ModifyHandler(h.CalendarChooseHandler, []int{handlers.KeyboardStarter, handlers.StateBackable})},
 		cmd.CalendarChooseFirstCommand:  {h.ModifyHandler(h.CalendarChooseFirstHandler, []int{})},
 		cmd.CalendarChooseSecondCommand: {h.ModifyHandler(h.CalendarChooseSecondHandler, []int{})},
-		cmd.CalendarLaunchCommand:       {h.ModifyHandler(h.CalendarLaunchHandler, []int{KeyboardStarter, CommandBackable, RemovableByTrigger})},
+		cmd.CalendarLaunchCommand:       {h.ModifyHandler(h.CalendarLaunchHandler, []int{handlers.KeyboardStarter, handlers.CommandBackable, handlers.RemovableByTrigger})},
 		cmd.CalendarNextMonthCommand:    {h.ModifyHandler(h.CalendarNextMonthHandler, []int{})},
 		cmd.CalendarPrevMonthCommand:    {h.ModifyHandler(h.CalendarPrevMonthHandler, []int{})},
 		cmd.CalendarNextYearCommand:     {h.ModifyHandler(h.CalendarNextYearHandler, []int{})},
 		cmd.CalendarPrevYearCommand:     {h.ModifyHandler(h.CalendarPrevYearHandler, []int{})},
-		cmd.CalendarSetDayCommand:       {h.ModifyHandler(h.CalendarSetDayHandler, []int{KeyboardStarter, CommandBackable, RemovableByTrigger})},
-		cmd.CalendarSetTimeCommand:      {h.ModifyHandler(h.CalendarSetTimeHandler, []int{KeyboardStarter})},
-		cmd.CalendarFinishCommand:       {h.ModifyHandler(h.CalendarFinishHandler, []int{KeyboardStopper, RemoveTriggerer})},
+		cmd.CalendarSetDayCommand:       {h.ModifyHandler(h.CalendarSetDayHandler, []int{handlers.KeyboardStarter, handlers.CommandBackable, handlers.RemovableByTrigger})},
+		cmd.CalendarSetTimeCommand:      {h.ModifyHandler(h.CalendarSetTimeHandler, []int{handlers.KeyboardStarter})},
+		cmd.CalendarFinishCommand:       {h.ModifyHandler(h.CalendarFinishHandler, []int{handlers.KeyboardStopper, handlers.RemoveTriggerer})},
 	}
 
 	return h
 }
 
-func (handler *CalendarHandler) Handle(params HandlerParams) ([]HandlerResponse, error) {
-	var res []HandlerResponse
+func (handler *CalendarHandler) Handle(params handlers.HandlerParams) ([]handlers.HandlerResponse, error) {
+	var res []handlers.HandlerResponse
 
-	handleFuncs, ok := handler.GetCommandFromMap(params.command)
+	handleFuncs, ok := handler.GetCommandFromMap(params.Command)
 	if !ok {
 		panic("wrong handler")
 	}
@@ -63,7 +64,7 @@ func (handler *CalendarHandler) Handle(params HandlerParams) ([]HandlerResponse,
 	for _, handleFunc := range handleFuncs {
 		response, err := handleFunc(params)
 		if err != nil {
-			return []HandlerResponse{}, err
+			return []handlers.HandlerResponse{}, err
 		}
 		res = append(res, response)
 	}
@@ -71,16 +72,16 @@ func (handler *CalendarHandler) Handle(params HandlerParams) ([]HandlerResponse,
 	return res, nil
 }
 
-func (handler *CalendarHandler) HandleBackCommand(params HandlerParams) ([]HandlerResponse, error) {
-	var response []HandlerResponse
+func (handler *CalendarHandler) HandleBackCommand(params handlers.HandlerParams) ([]handlers.HandlerResponse, error) {
+	var response []handlers.HandlerResponse
 
-	var res HandlerResponse
+	var res handlers.HandlerResponse
 
-	if params.command.Equal(cmd.CalendarChooseCommand) {
+	if params.Command.Equal(cmd.CalendarChooseCommand) {
 		handler.availableTime = nil
 	}
 
-	if params.command.Equal(cmd.CalendarLaunchCommand) {
+	if params.Command.Equal(cmd.CalendarLaunchCommand) {
 		handler.chosenDate = time.Time{}
 	}
 
@@ -88,65 +89,65 @@ func (handler *CalendarHandler) HandleBackCommand(params HandlerParams) ([]Handl
 	return response, nil
 }
 
-func (handler *CalendarHandler) CalendarStartHandler(params HandlerParams) (HandlerResponse, error) {
-	var res HandlerResponse
+func (handler *CalendarHandler) CalendarStartHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
+	var res handlers.HandlerResponse
 
-	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.CalendarChooseCommand)
-	res.nextState = "calendar-state"
+	res.PostCommandsHandle.Commands = append(res.PostCommandsHandle.Commands, cmd.CalendarChooseCommand)
+	res.NextState = "calendar-state"
 
 	handler.currentTime = time.Now()
 
 	return res, nil
 }
 
-func (handler *CalendarHandler) CalendarChooseHandler(params HandlerParams) (HandlerResponse, error) {
-	var res HandlerResponse
+func (handler *CalendarHandler) CalendarChooseHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
+	var res handlers.HandlerResponse
 
 	calendar1 := bottypes.Button{
-		ChatID:  params.message.Info.ChatID,
+		ChatID:  params.Message.Info.ChatID,
 		Text:    "Schedule 1",
 		Command: cmd.CalendarChooseFirstCommand,
 	}
 
 	calendar2 := bottypes.Button{
-		ChatID:  params.message.Info.ChatID,
+		ChatID:  params.Message.Info.ChatID,
 		Text:    "Schedule 2",
 		Command: cmd.CalendarChooseSecondCommand,
 	}
 
-	res.messages = append(res.messages, bottypes.Message{
-		ChatID: params.message.Info.ChatID,
+	res.Messages = append(res.Messages, bottypes.Message{
+		ChatID: params.Message.Info.ChatID,
 		Text:   "Choose schedule",
 		ButtonRows: []bottypes.ButtonRows{
 			{Buttons: []bottypes.Button{calendar1, calendar2}},
 		},
 	})
 
-	res.nextCommands = append(res.nextCommands, cmd.CalendarChooseFirstCommand, cmd.CalendarChooseSecondCommand)
+	res.NextCommands = append(res.NextCommands, cmd.CalendarChooseFirstCommand, cmd.CalendarChooseSecondCommand)
 
 	return res, nil
 }
 
-func (handler *CalendarHandler) CalendarChooseFirstHandler(params HandlerParams) (HandlerResponse, error) {
-	var res HandlerResponse
+func (handler *CalendarHandler) CalendarChooseFirstHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
+	var res handlers.HandlerResponse
 
 	handler.availableTime = handler.gs.GetScheduleFirst()
-	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.CalendarLaunchCommand)
+	res.PostCommandsHandle.Commands = append(res.PostCommandsHandle.Commands, cmd.CalendarLaunchCommand)
 
 	return res, nil
 }
 
-func (handler *CalendarHandler) CalendarChooseSecondHandler(params HandlerParams) (HandlerResponse, error) {
-	var res HandlerResponse
+func (handler *CalendarHandler) CalendarChooseSecondHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
+	var res handlers.HandlerResponse
 
 	handler.availableTime = handler.gs.GetScheduleSecond()
-	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.CalendarLaunchCommand)
+	res.PostCommandsHandle.Commands = append(res.PostCommandsHandle.Commands, cmd.CalendarLaunchCommand)
 
 	return res, nil
 }
 
-func (handler *CalendarHandler) CalendarLaunchHandler(params HandlerParams) (HandlerResponse, error) {
-	var res HandlerResponse
+func (handler *CalendarHandler) CalendarLaunchHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
+	var res handlers.HandlerResponse
 
 	calendar := handler.buildCalendar()
 
@@ -157,7 +158,7 @@ func (handler *CalendarHandler) CalendarLaunchHandler(params HandlerParams) (Han
 		for _, calendarData := range calendarRow {
 
 			button := bottypes.Button{
-				ChatID:  params.message.Info.ChatID,
+				ChatID:  params.Message.Info.ChatID,
 				Text:    calendarData,
 				Command: cmd.NothingnessCommand,
 			}
@@ -189,15 +190,15 @@ func (handler *CalendarHandler) CalendarLaunchHandler(params HandlerParams) (Han
 		buttonRows = append(buttonRows, buttonRow)
 	}
 
-	res.messages = append(res.messages, bottypes.Message{
+	res.Messages = append(res.Messages, bottypes.Message{
 		Text:       "Launch the calendar",
-		ChatID:     params.message.Info.ChatID,
+		ChatID:     params.Message.Info.ChatID,
 		ButtonRows: buttonRows,
 	})
 
-	res.nextCommandToParse.ParseType = bottypes.DynamicButtonParse
-	res.nextCommandToParse.Command = cmd.CalendarSetDayCommand
-	res.nextCommandToParse.Exceptions = append(res.nextCommandToParse.Exceptions,
+	res.NextCommandToParse.ParseType = bottypes.DynamicButtonParse
+	res.NextCommandToParse.Command = cmd.CalendarSetDayCommand
+	res.NextCommandToParse.Exceptions = append(res.NextCommandToParse.Exceptions,
 		cmd.NothingnessCommand,
 		cmd.CalendarPrevMonthCommand,
 		cmd.CalendarNextMonthCommand,
@@ -205,7 +206,7 @@ func (handler *CalendarHandler) CalendarLaunchHandler(params HandlerParams) (Han
 		cmd.CalendarPrevYearCommand,
 	)
 
-	res.nextCommands = append(res.nextCommands,
+	res.NextCommands = append(res.NextCommands,
 		cmd.NothingnessCommand,
 		cmd.CalendarPrevMonthCommand,
 		cmd.CalendarNextMonthCommand,
@@ -216,46 +217,46 @@ func (handler *CalendarHandler) CalendarLaunchHandler(params HandlerParams) (Han
 	return res, nil
 }
 
-func (handler *CalendarHandler) CalendarNextMonthHandler(params HandlerParams) (HandlerResponse, error) {
-	var res HandlerResponse
+func (handler *CalendarHandler) CalendarNextMonthHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
+	var res handlers.HandlerResponse
 
 	handler.currentTime = handler.currentTime.AddDate(0, 1, 0)
-	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.CalendarLaunchCommand)
+	res.PostCommandsHandle.Commands = append(res.PostCommandsHandle.Commands, cmd.CalendarLaunchCommand)
 
 	return res, nil
 }
 
-func (handler *CalendarHandler) CalendarPrevMonthHandler(params HandlerParams) (HandlerResponse, error) {
-	var res HandlerResponse
+func (handler *CalendarHandler) CalendarPrevMonthHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
+	var res handlers.HandlerResponse
 
 	handler.currentTime = handler.currentTime.AddDate(0, -1, 0)
-	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.CalendarLaunchCommand)
+	res.PostCommandsHandle.Commands = append(res.PostCommandsHandle.Commands, cmd.CalendarLaunchCommand)
 
 	return res, nil
 }
 
-func (handler *CalendarHandler) CalendarNextYearHandler(params HandlerParams) (HandlerResponse, error) {
-	var res HandlerResponse
+func (handler *CalendarHandler) CalendarNextYearHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
+	var res handlers.HandlerResponse
 
 	handler.currentTime = handler.currentTime.AddDate(1, 0, 0)
-	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.CalendarLaunchCommand)
+	res.PostCommandsHandle.Commands = append(res.PostCommandsHandle.Commands, cmd.CalendarLaunchCommand)
 
 	return res, nil
 }
 
-func (handler *CalendarHandler) CalendarPrevYearHandler(params HandlerParams) (HandlerResponse, error) {
-	var res HandlerResponse
+func (handler *CalendarHandler) CalendarPrevYearHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
+	var res handlers.HandlerResponse
 
 	handler.currentTime = handler.currentTime.AddDate(-1, 0, 0)
-	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.CalendarLaunchCommand)
+	res.PostCommandsHandle.Commands = append(res.PostCommandsHandle.Commands, cmd.CalendarLaunchCommand)
 
 	return res, nil
 }
 
-func (handler *CalendarHandler) CalendarSetDayHandler(params HandlerParams) (HandlerResponse, error) {
-	var res HandlerResponse
+func (handler *CalendarHandler) CalendarSetDayHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
+	var res handlers.HandlerResponse
 
-	date, err := time.Parse(date_format, params.command.Data)
+	date, err := time.Parse(date_format, params.Command.Data)
 	if err != nil {
 		panic(err)
 	}
@@ -273,7 +274,7 @@ func (handler *CalendarHandler) CalendarSetDayHandler(params HandlerParams) (Han
 			buttons = append(buttons, bottypes.ButtonRows{
 				Buttons: []bottypes.Button{
 					{
-						ChatID: params.message.Info.ChatID,
+						ChatID: params.Message.Info.ChatID,
 						Text:   dateString,
 						Command: bottypes.Command{
 							Command:     cmd.CalendarSetTimeCommand.Command,
@@ -286,23 +287,23 @@ func (handler *CalendarHandler) CalendarSetDayHandler(params HandlerParams) (Han
 		}
 	}
 
-	res.messages = append(res.messages, bottypes.Message{
+	res.Messages = append(res.Messages, bottypes.Message{
 		Text:       "Select time",
 		ButtonRows: buttons,
-		ChatID:     params.message.Info.ChatID,
+		ChatID:     params.Message.Info.ChatID,
 	})
 
-	res.nextCommandToParse.ParseType = bottypes.DynamicButtonParse
-	res.nextCommandToParse.Command = cmd.CalendarSetTimeCommand
-	res.nextCommands = append(res.nextCommands, cmd.CalendarSetTimeCommand)
+	res.NextCommandToParse.ParseType = bottypes.DynamicButtonParse
+	res.NextCommandToParse.Command = cmd.CalendarSetTimeCommand
+	res.NextCommands = append(res.NextCommands, cmd.CalendarSetTimeCommand)
 
 	return res, nil
 }
 
-func (handler *CalendarHandler) CalendarSetTimeHandler(params HandlerParams) (HandlerResponse, error) {
-	var res HandlerResponse
+func (handler *CalendarHandler) CalendarSetTimeHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
+	var res handlers.HandlerResponse
 
-	date, err := time.Parse(time_format, params.command.Data)
+	date, err := time.Parse(time_format, params.Command.Data)
 	if err != nil {
 		panic(err)
 	}
@@ -310,21 +311,21 @@ func (handler *CalendarHandler) CalendarSetTimeHandler(params HandlerParams) (Ha
 	handler.chosenDate = handler.chosenDate.Add(
 		time.Hour*time.Duration(date.Hour()) + time.Minute*time.Duration(date.Minute()))
 
-	res.messages = append(res.messages, bottypes.Message{
+	res.Messages = append(res.Messages, bottypes.Message{
 		Text:   "You have chosen " + handler.chosenDate.Format(date_time_format),
-		ChatID: params.message.Info.ChatID,
+		ChatID: params.Message.Info.ChatID,
 	})
 
-	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.CalendarFinishCommand)
+	res.PostCommandsHandle.Commands = append(res.PostCommandsHandle.Commands, cmd.CalendarFinishCommand)
 
 	return res, nil
 }
 
-func (handler *CalendarHandler) CalendarFinishHandler(params HandlerParams) (HandlerResponse, error) {
-	var res HandlerResponse
+func (handler *CalendarHandler) CalendarFinishHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
+	var res handlers.HandlerResponse
 
-	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, cmd.ShowCommandsCommand)
-	res.nextState = "start-state"
+	res.PostCommandsHandle.Commands = append(res.PostCommandsHandle.Commands, cmd.ShowCommandsCommand)
+	res.NextState = "start-state"
 
 	return res, nil
 }

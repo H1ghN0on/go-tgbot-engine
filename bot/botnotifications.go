@@ -9,6 +9,24 @@ import (
 
 /* Notification messages */
 
+type UserNotificationType int
+
+const (
+	OnlyMe            UserNotificationType = iota
+	AllConnectedUsers UserNotificationType = iota
+)
+
+func (bot Bot) ChooseUserNotificator(nfType UserNotificationType) func() []bottypes.User {
+	switch nfType {
+	case OnlyMe:
+		return bot.GetAllConnectedUsers()
+	case AllConnectedUsers:
+		return bot.GetOnlyMe()
+	}
+
+	panic("unknown notificator")
+}
+
 func (bot Bot) TimeNotification() []bottypes.Message {
 	var messages []bottypes.Message
 
@@ -21,6 +39,7 @@ func (bot Bot) TimeNotification() []bottypes.Message {
 }
 
 func (bot Bot) RandomTrackNotification() []bottypes.Message {
+
 	var messages []bottypes.Message
 
 	var tracks = []string{"Wire", "Senior Grang Botanist", "Ehiztaria", "Inbred Basilisk", "The Abhorrence", "The Legionary", "Silent Scream"}
@@ -29,29 +48,33 @@ func (bot Bot) RandomTrackNotification() []bottypes.Message {
 	messages = append(messages, bottypes.Message{
 		Text: tracks[randomNumber],
 	})
-
 	return messages
+
 }
 
 /* Users for notification */
 
-func (bot Bot) AllConnectedUsers() []bottypes.User {
+func (bot Bot) GetAllConnectedUsers() func() []bottypes.User {
 
-	var users []bottypes.User
+	return func() []bottypes.User {
+		var users []bottypes.User
 
-	for _, client := range bot.clients {
-		users = append(users, bottypes.User{
-			UserID: client.GetUserID(),
-		})
+		for _, client := range bot.clients {
+			users = append(users, bottypes.User{
+				UserID: client.GetUserID(),
+			})
+		}
+
+		return users
 	}
-
-	return users
 }
 
-func (bot *Bot) OnlyMe() []bottypes.User {
-	var users []bottypes.User
-	users = append(users, bottypes.User{
-		UserID: 872451555,
-	})
-	return users
+func (bot Bot) GetOnlyMe() func() []bottypes.User {
+	return func() []bottypes.User {
+		var users []bottypes.User
+		users = append(users, bottypes.User{
+			UserID: 872451555,
+		})
+		return users
+	}
 }

@@ -13,13 +13,12 @@ type BackHandler struct {
 	commandQueue []bottypes.Command
 }
 
-func NewBackHandler(gs GlobalStater, sm StateMachiner) *BackHandler {
+func NewBackHandler(sm StateMachiner) *BackHandler {
 
 	h := &BackHandler{}
-	h.gs = gs
 	h.sm = sm
 
-	h.commands = map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error){
+	h.Commands = map[bottypes.Command][]func(params HandlerParams) (HandlerResponse, error){
 		cmd.BackStateCommand:   {h.ModifyHandler(h.BackStateHandler, []int{RemoveTriggerer, KeyboardStopper})},
 		cmd.BackCommandCommand: {h.BackCommandHandler},
 	}
@@ -28,7 +27,7 @@ func NewBackHandler(gs GlobalStater, sm StateMachiner) *BackHandler {
 }
 
 func (handler *BackHandler) UpdateLastCommand(command bottypes.Command) {
-	if !command.Equal(cmd.BackStateCommand) && !command.Equal(cmd.BackCommandCommand) {
+	if !command.Equal(cmd.BackStateCommand) && !command.Equal(cmd.BackCommandCommand) && !command.Equal(cmd.NothingnessCommand) {
 		if len(handler.commandQueue) == 0 || command != handler.commandQueue[len(handler.commandQueue)-1] {
 			if len(handler.commandQueue) > command_queue_max_size {
 				handler.commandQueue = handler.commandQueue[1:]
@@ -45,7 +44,7 @@ func (handler *BackHandler) ClearCommandQueue() {
 func (handler *BackHandler) Handle(params HandlerParams) ([]HandlerResponse, error) {
 	var res []HandlerResponse
 
-	handleFuncs, ok := handler.GetCommandFromMap(params.command)
+	handleFuncs, ok := handler.GetCommandFromMap(params.Command)
 	if !ok {
 		panic("wrong handler")
 	}
@@ -67,8 +66,8 @@ func (handler *BackHandler) BackStateHandler(params HandlerParams) (HandlerRespo
 	prevState := handler.sm.GetPreviousState()
 	newActiveCommand := prevState.GetStartCommand()
 
-	res.nextState = prevState.GetName()
-	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, newActiveCommand)
+	res.NextState = prevState.GetName()
+	res.PostCommandsHandle.Commands = append(res.PostCommandsHandle.Commands, newActiveCommand)
 
 	return res, nil
 }
@@ -77,7 +76,7 @@ func (handler *BackHandler) BackCommandHandler(params HandlerParams) (HandlerRes
 	var res HandlerResponse
 
 	if len(handler.commandQueue) < 1 {
-		return HandlerResponse{}, HandlerResponseError{message: "cannot return to previous command"}
+		return HandlerResponse{}, HandlerResponseError{Message: "cannot return to previous command"}
 	}
 
 	lastCommand := handler.commandQueue[len(handler.commandQueue)-1]
@@ -87,14 +86,14 @@ func (handler *BackHandler) BackCommandHandler(params HandlerParams) (HandlerRes
 		handler.commandQueue = handler.commandQueue[:len(handler.commandQueue)-1]
 
 		if len(handler.commandQueue) < 1 {
-			return HandlerResponse{}, HandlerResponseError{message: "cannot return to previous command"}
+			return HandlerResponse{}, HandlerResponseError{Message: "cannot return to previous command"}
 		}
 
 		currentCommand = handler.commandQueue[len(handler.commandQueue)-1]
 	}
 
-	res.postCommandsHandle.commands = append(res.postCommandsHandle.commands, currentCommand)
-	res.postCommandsHandle.isBackCommand = true
+	res.PostCommandsHandle.Commands = append(res.PostCommandsHandle.Commands, currentCommand)
+	res.PostCommandsHandle.IsBackCommand = true
 
 	return res, nil
 }

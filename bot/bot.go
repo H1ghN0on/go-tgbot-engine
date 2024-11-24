@@ -7,15 +7,16 @@ import (
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/client"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/notificator"
-	"github.com/H1ghN0on/go-tgbot-engine/globalstate"
-	"github.com/H1ghN0on/go-tgbot-engine/handlers"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
-	"github.com/H1ghN0on/go-tgbot-engine/statemachine"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-var shouldUseNotifications bool = false
+type Notificationer interface {
+	GetMessages() []bottypes.Message
+	GetUsers() []bottypes.User
+	GetTimeoutSec() int
+}
 
 type BotError struct {
 	message string
@@ -26,6 +27,7 @@ func (err BotError) Error() string {
 }
 
 type Notificator interface {
+	AddNotification(notificator.Notificationer)
 	Start()
 	Stop()
 }
@@ -33,8 +35,8 @@ type Notificator interface {
 type Bot struct {
 	api         *tgbotapi.BotAPI
 	clients     map[int64]*client.Client
-	gs          *globalstate.GlobalState
 	notificator Notificator
+	onNewClient func() client.CommandHandler
 }
 
 func (client *Bot) parseMessage(update tgbotapi.Update) (bottypes.Message, int64, error) {
@@ -106,8 +108,9 @@ func (bot *Bot) ListenMessages() {
 
 		if !ok {
 			logger.Bot().Info("adding new client with id", string(receivedMessage.ChatID))
-			sm := statemachine.NewStateMachine()
-			ch := handlers.NewCommandHandler(sm, bot.gs)
+
+			ch := bot.onNewClient()
+
 			activeClient = client.NewClient(bot.api, ch, receivedMessage.ChatID)
 			bot.clients[receivedMessage.ChatID] = activeClient
 		}
@@ -137,23 +140,32 @@ func (bot *Bot) notificationHandler(notification notificator.Notificationer) {
 	}
 }
 
-func NewBot(api *tgbotapi.BotAPI, gs *globalstate.GlobalState) *Bot {
+func (bot *Bot) AddStaticNotification(messages []bottypes.Message, users UserNotificationType, timeout int) {
+	if bot.notificator == nil {
+		return
+	}
+	notification := notificator.NewStaticNotification(messages, bot.ChooseUserNotificator(users), timeout)
+	bot.notificator.AddNotification(notification)
+}
+
+func (bot *Bot) AddDynamicNotification(messages func() []bottypes.Message, users UserNotificationType, timeout int) {
+	if bot.notificator == nil {
+		return
+	}
+	notification := notificator.NewDynamicNotification(messages, bot.ChooseUserNotificator(users), timeout)
+	bot.notificator.AddNotification(notification)
+}
+
+func NewBot(api *tgbotapi.BotAPI, onNewClient func() client.CommandHandler, useNotificator bool) *Bot {
 	bot := &Bot{
 		api: api,
-		gs:  gs,
 	}
-
 	bot.clients = make(map[int64]*client.Client)
+	bot.onNewClient = onNewClient
 
-	if shouldUseNotifications {
-		notification := notificator.NewStaticNotification([]bottypes.Message{{Text: "Ravevenge"}, {Text: "Glass Cages"}}, bot.OnlyMe, 5)
-		notification2 := notificator.NewStaticNotification([]bottypes.Message{{Text: "Crypteque"}}, bot.AllConnectedUsers, 10)
-
-		dynamicNotification := notificator.NewDynamicNotification(bot.TimeNotification, bot.OnlyMe, 5)
-		dynamicNotification2 := notificator.NewDynamicNotification(bot.RandomTrackNotification, bot.AllConnectedUsers, 10)
-
+	if useNotificator {
 		bot.notificator = notificator.NewNotificator(
-			[]notificator.Notificationer{*notification, *notification2, *dynamicNotification, *dynamicNotification2},
+			nil,
 			bot.notificationHandler)
 	}
 

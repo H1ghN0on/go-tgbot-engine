@@ -5,44 +5,44 @@ import (
 	"time"
 )
 
-type GlobalState struct {
+type ExampleGlobalState struct {
 	name    string
 	surname string
 	age     int
 }
 
-func (gs GlobalState) GetName() string {
+func (gs ExampleGlobalState) GetName() string {
 	return gs.name
 }
 
-func (gs GlobalState) GetSurname() string {
+func (gs ExampleGlobalState) GetSurname() string {
 	return gs.surname
 }
 
-func (gs GlobalState) GetAge() int {
+func (gs ExampleGlobalState) GetAge() int {
 	return gs.age
 }
 
-func (gs *GlobalState) SetName(name string) {
+func (gs *ExampleGlobalState) SetName(name string) {
 	gs.name = name
 }
 
-func (gs *GlobalState) SetSurname(surname string) {
+func (gs *ExampleGlobalState) SetSurname(surname string) {
 	gs.surname = surname
 }
 
-func (gs *GlobalState) SetAge(age int) {
+func (gs *ExampleGlobalState) SetAge(age int) {
 	gs.age = age
 }
 
-func (gs *GlobalState) GetDataForDynamicKeyboard() map[string][]string {
+func (gs *ExampleGlobalState) GetDataForDynamicKeyboard() map[string][]string {
 	return map[string][]string{
 		"first_stage":  {"Necromantic", "Gotcha gotcha", "Hanipaganda"},
 		"second_stage": {"Bad magus", "Third eye", "Midnight parade"},
 	}
 }
 
-func (gs *GlobalState) GetScheduleFirst() (res []time.Time) {
+func (gs *ExampleGlobalState) GetScheduleFirst() (res []time.Time) {
 	today := time.Now()
 
 	for i := 0; i < 5; i++ {
@@ -56,7 +56,7 @@ func (gs *GlobalState) GetScheduleFirst() (res []time.Time) {
 	return res
 }
 
-func (gs *GlobalState) GetScheduleSecond() (res []time.Time) {
+func (gs *ExampleGlobalState) GetScheduleSecond() (res []time.Time) {
 	today := time.Now()
 
 	for i := 0; i < 10; i++ {

@@ -22,7 +22,6 @@ func (err ClientError) Error() string {
 
 type HandlerResponser interface {
 	GetMessages() []bottypes.Message
-	NextState() string
 	ContainsTrigger(bottypes.Trigger) bool
 	GetNextCommands() []bottypes.Command
 	GetNextCommandToParse() bottypes.ParseableCommand

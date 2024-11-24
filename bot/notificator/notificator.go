@@ -13,6 +13,12 @@ type TickerData struct {
 	done      chan bool
 }
 
+type Notificationer interface {
+	GetMessages() []bottypes.Message
+	GetUsers() []bottypes.User
+	GetTimeoutSec() int
+}
+
 type Notification struct {
 	users      func() []bottypes.User
 	timeoutSec int
@@ -44,15 +50,14 @@ func (nf Notification) GetTimeoutSec() int {
 	return nf.timeoutSec
 }
 
-type Notificationer interface {
-	GetMessages() []bottypes.Message
-	GetUsers() []bottypes.User
-	GetTimeoutSec() int
-}
-
 type Notificator struct {
 	notifications   map[*TickerData]Notificationer
 	timeoutCallback func(notification Notificationer)
+}
+
+func (nf Notificator) AddNotification(notification Notificationer) {
+	ticker := &TickerData{}
+	nf.notifications[ticker] = notification
 }
 
 func (nf *Notificator) startTimer(ticker *TickerData, notification Notificationer) {
@@ -126,6 +131,10 @@ func NewDynamicNotification(messages func() []bottypes.Message, users func() []b
 		messages:     messages,
 		Notification: *notification,
 	}
+}
+
+type AnyNotificationInterface interface {
+	StaticNotification | DynamicNotification
 }
 
 func NewNotificator(notifications []Notificationer, cb func(Notificationer)) *Notificator {
