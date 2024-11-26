@@ -1,4 +1,4 @@
-package globalstate
+package globalstate_example
 
 import (
 	"math/rand/v2"

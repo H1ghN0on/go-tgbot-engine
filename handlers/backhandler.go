@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
-	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands/example"
 )
 
 var command_queue_max_size int = 30

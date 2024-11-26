@@ -6,7 +6,7 @@ import (
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/client"
-	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands/example"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
 )
 

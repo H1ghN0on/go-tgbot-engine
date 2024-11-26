@@ -1,4 +1,4 @@
-package commands
+package commands_example
 
 import "github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 

@@ -3,7 +3,7 @@ package handlers_example
 import (
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
-	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands/example"
 )
 
 type KeyboardHandler struct {

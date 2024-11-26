@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
-	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands/example"
 )
 
 const (
