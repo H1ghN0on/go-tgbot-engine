@@ -229,7 +229,7 @@ func main() {
 	}
 
 	exampleBot := bot.NewBot(botAPI, onNewClient, false)
-	exampleBot.AddStaticNotification([]bottypes.Message{{Text: "Ravevenge"}}, bot.OnlyStorm, 10)
+	exampleBot.AddStaticNotification([]bottypes.Message{{Text: "Ravevenge"}}, bot.OnlyMe, 10)
 	exampleBot.AddStaticNotification([]bottypes.Message{{Text: "Crypteque"}}, bot.AllConnectedUsers, 5)
 
 	exampleBot.AddDynamicNotification(timeNotification, bot.OnlyStorm, 10)
