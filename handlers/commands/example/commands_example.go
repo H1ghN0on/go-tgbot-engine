@@ -1,12 +1,15 @@
 package commands_example
 
-import "github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+import (
+	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	"github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
+)
 
-var NothingnessCommand bottypes.Command = bottypes.Command{Command: "/nothingness", Description: "Пустышка", SkipOnBack: true}
+var NothingnessCommand = commands.NothingnessCommand
 
 // Back Handler
-var BackCommandCommand bottypes.Command = bottypes.Command{Command: "/back_command", Description: "Вернуться к предыдущей команде"}
-var BackStateCommand bottypes.Command = bottypes.Command{Command: "/back_state", Description: "Вернуться к предыдущему состоянию"}
+var BackCommandCommand = commands.BackCommandCommand
+var BackStateCommand = commands.BackStateCommand
 
 // Start Handler
 var ShowCommandsCommand bottypes.Command = bottypes.Command{Command: "/show_commands", Description: "Главное меню"}
@@ -65,9 +68,9 @@ var CalendarSetTimeCommand bottypes.Command = bottypes.Command{Command: "/calend
 var CalendarFinishCommand bottypes.Command = bottypes.Command{Command: "/calendar_finish", Description: "Закончить с календарем"}
 
 var Commands = []bottypes.Command{
-	NothingnessCommand,
-	BackCommandCommand,
-	BackStateCommand,
+	commands.NothingnessCommand,
+	commands.BackCommandCommand,
+	commands.BackStateCommand,
 
 	ShowCommandsCommand,
 	LevelOneCommand,
