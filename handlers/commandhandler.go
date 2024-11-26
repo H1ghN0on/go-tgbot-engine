@@ -2,11 +2,9 @@ package handlers
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/client"
-	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands/example"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
 )
 
@@ -41,6 +39,7 @@ type Handlerable interface {
 	GetCommands() []bottypes.Command
 	Handle(params HandlerParams) ([]HandlerResponse, error)
 	HandleBackCommand(params HandlerParams) ([]HandlerResponse, error)
+	FindCommandInTheList(bottypes.Command) (bottypes.Command, error)
 }
 
 type BackHandlerable interface {
@@ -172,27 +171,34 @@ func (ch *CommandHandler) handleCommand(
 	logger.CommandHandler().Info("trying to handle", command.String())
 
 	for _, handler := range ch.handlers {
+
 		if ch.checkCommandInHandler(command, handler) {
 
+			trueCommand, err := handler.FindCommandInTheList(command)
+			if err != nil {
+				logger.CommandHandler().Critical("error while finding true command in the list", command.String(), err.Error())
+				return CommandHandlerResponse{}, CommandHandlerError{message: err.Error()}
+			}
+
 			if shouldHandleBack {
-				responses, err := handler.HandleBackCommand(HandlerParams{Command: command, Message: receivedMessage})
+				responses, err := handler.HandleBackCommand(HandlerParams{Command: trueCommand, Message: receivedMessage})
 
 				if err != nil {
-					logger.CommandHandler().Critical("error while handling command", command.String(), err.Error())
+					logger.CommandHandler().Critical("error while handling command", trueCommand.String(), err.Error())
 					return CommandHandlerResponse{}, CommandHandlerError{message: err.Error()}
 				}
 
 				res.responses = append(res.responses, responses...)
 			}
 
-			responses, err := handler.Handle(HandlerParams{Command: command, Message: receivedMessage})
+			responses, err := handler.Handle(HandlerParams{Command: trueCommand, Message: receivedMessage})
 
 			if err != nil {
-				logger.CommandHandler().Critical("error while handling command", command.String(), err.Error())
+				logger.CommandHandler().Critical("error while handling command", trueCommand.String(), err.Error())
 				return CommandHandlerResponse{}, CommandHandlerError{message: err.Error()}
 			}
 
-			ch.backHandler.UpdateLastCommand(command)
+			ch.backHandler.UpdateLastCommand(trueCommand)
 			res.responses = append(res.responses, responses...)
 			break
 		}
@@ -225,22 +231,6 @@ func (ch *CommandHandler) handleCommand(
 	return res, nil
 }
 
-func findCommandFromTheList(command bottypes.Command) (bottypes.Command, error) {
-	if command.Command == "" || !command.IsCommand() {
-		return bottypes.Command{}, fmt.Errorf("not command received")
-	}
-
-	index := slices.IndexFunc(cmd.Commands, func(com bottypes.Command) bool { return command.Equal(com) })
-	if index == -1 {
-		return bottypes.Command{}, fmt.Errorf("unknown command received")
-	}
-
-	trueCommand := cmd.Commands[index]
-	trueCommand.Data = command.Data
-
-	return trueCommand, nil
-}
-
 func (ch *CommandHandler) Handle(req client.CommandHandlerRequester) (client.CommandHandlerResponser, error) {
 
 	receivedMessage := req.GetMessage()
@@ -254,13 +244,6 @@ func (ch *CommandHandler) Handle(req client.CommandHandlerRequester) (client.Com
 		logger.CommandHandler().Critical(receivedMessage.Command.String(), "is not in state commands (", convertCommandsToString(ch.sm.GetActiveState().GetAvailableCommands()), ")")
 		return CommandHandlerResponse{}, CommandHandlerError{message: "this command is not available (not in state)"}
 	}
-
-	trueCommand, err := findCommandFromTheList(receivedMessage.Command)
-	if err != nil {
-		return CommandHandlerResponse{}, err
-	}
-
-	receivedMessage.Command = trueCommand
 
 	chRes, err := ch.handleCommand(receivedMessage.Command, receivedMessage, false)
 	if err != nil {
