@@ -148,7 +148,7 @@ func configureStateMachine() *statemachine.StateMachine {
 		cmd.BackCommandCommand,
 		cmd.NothingnessCommand,
 	)
-
+	
 	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState, *startState, *dynamicKeyboardState, *calendarState)
 	levelFourState.SetAvailableStates(*startState)
 	keyboardState.SetAvailableStates(*startState)

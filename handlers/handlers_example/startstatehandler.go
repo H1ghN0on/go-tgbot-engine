@@ -48,9 +48,6 @@ func (handler *StartHandler) Handle(params handlers.HandlerParams) ([]handlers.H
 
 func (handler *StartHandler) StartHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
 	var res handlers.HandlerResponse
-	chatID := params.Message.Info.ChatID
-	res.Messages = append(res.Messages, bottypes.Message{ChatID: chatID, Text: "Пизда"})
-
 	res.PostCommandsHandle.Commands = append(res.PostCommandsHandle.Commands, cmd.ShowCommandsCommand)
 	return res, nil
 }
