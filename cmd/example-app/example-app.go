@@ -43,9 +43,10 @@ func configureStateMachine() *statemachine.StateMachine {
 
 	startState := statemachine.NewState(
 		"start-state",
-
+		
 		cmd.ShowCommandsCommand,
-
+		
+		cmd.StartCommand,
 		cmd.LevelOneCommand,
 		cmd.LevelTwoCommand,
 		cmd.LevelThreeCommand,
