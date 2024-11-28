@@ -8,9 +8,8 @@ var NothingnessCommand bottypes.Command = bottypes.Command{Command: "/nothingnes
 var BackCommandCommand bottypes.Command = bottypes.Command{Command: "/back_command", Description: "Вернуться к предыдущей команде"}
 var BackStateCommand bottypes.Command = bottypes.Command{Command: "/back_state", Description: "Вернуться к предыдущему состоянию"}
 
-var StartCommand bottypes.Command = bottypes.Command{Command: "/start", Description: "Команда Start"}
-
 // Start Handler
+var StartCommand bottypes.Command = bottypes.Command{Command: "/start", Description: "Команда Start"}
 var ShowCommandsCommand bottypes.Command = bottypes.Command{Command: "/show_commands", Description: "Главное меню"}
 var LevelOneCommand bottypes.Command = bottypes.Command{Command: "/level_one", Description: "Уровень 1"}
 var LevelTwoCommand bottypes.Command = bottypes.Command{Command: "/level_two", Description: "Уровень 2"}
