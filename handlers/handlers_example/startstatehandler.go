@@ -16,6 +16,7 @@ func NewStartHandler(gs ExampleGlobalStater) *StartHandler {
 	h.gs = gs
 
 	h.Commands = map[bottypes.Command][]func(params handlers.HandlerParams) (handlers.HandlerResponse, error){
+		cmd.StartCommand:        {h.ModifyHandler(h.StartHandler, []int{})},
 		cmd.ShowCommandsCommand: {h.ModifyHandler(h.ShowCommandsHandler, []int{handlers.RemovableByTrigger})},
 		cmd.LevelOneCommand:     {h.ModifyHandler(h.LevelOneHandler, []int{handlers.RemoveTriggerer})},
 		cmd.LevelTwoCommand:     {h.ModifyHandler(h.LevelTwoHandler, []int{handlers.RemoveTriggerer})},
@@ -42,6 +43,12 @@ func (handler *StartHandler) Handle(params handlers.HandlerParams) ([]handlers.H
 		res = append(res, response)
 	}
 
+	return res, nil
+}
+
+func (handler *StartHandler) StartHandler(params handlers.HandlerParams) (handlers.HandlerResponse, error) {
+	var res handlers.HandlerResponse
+	res.PostCommandsHandle.Commands = append(res.PostCommandsHandle.Commands, cmd.ShowCommandsCommand)
 	return res, nil
 }
 

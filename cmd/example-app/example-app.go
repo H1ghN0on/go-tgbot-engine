@@ -43,9 +43,10 @@ func configureStateMachine() *statemachine.StateMachine {
 
 	startState := statemachine.NewState(
 		"start-state",
-
+		
 		cmd.ShowCommandsCommand,
-
+		
+		cmd.StartCommand,
 		cmd.LevelOneCommand,
 		cmd.LevelTwoCommand,
 		cmd.LevelThreeCommand,
@@ -147,7 +148,7 @@ func configureStateMachine() *statemachine.StateMachine {
 		cmd.BackCommandCommand,
 		cmd.NothingnessCommand,
 	)
-
+	
 	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState, *startState, *dynamicKeyboardState, *calendarState)
 	levelFourState.SetAvailableStates(*startState)
 	keyboardState.SetAvailableStates(*startState)

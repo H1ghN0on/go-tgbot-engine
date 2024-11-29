@@ -12,6 +12,7 @@ var BackCommandCommand = commands.BackCommandCommand
 var BackStateCommand = commands.BackStateCommand
 
 // Start Handler
+var StartCommand bottypes.Command = bottypes.Command{Command: "/start", Description: "Команда Start"}
 var ShowCommandsCommand bottypes.Command = bottypes.Command{Command: "/show_commands", Description: "Главное меню"}
 var LevelOneCommand bottypes.Command = bottypes.Command{Command: "/level_one", Description: "Уровень 1"}
 var LevelTwoCommand bottypes.Command = bottypes.Command{Command: "/level_two", Description: "Уровень 2"}
@@ -72,6 +73,7 @@ var Commands = []bottypes.Command{
 	commands.BackCommandCommand,
 	commands.BackStateCommand,
 
+	StartCommand,
 	ShowCommandsCommand,
 	LevelOneCommand,
 	LevelTwoCommand,
