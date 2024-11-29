@@ -96,7 +96,7 @@ func (bot *Bot) ListenMessages() {
 		receivedMessage, chatID, err := bot.parseMessage(update)
 
 		if err != nil {
-			logger.Bot().Critical(string(chatID), fmt.Errorf("parse error: %w", err).Error())
+			logger.Bot().Critical(strconv.FormatInt(chatID, 10), fmt.Errorf("parse error: %w", err).Error())
 			continue
 		}
 
@@ -107,7 +107,7 @@ func (bot *Bot) ListenMessages() {
 		activeClient, ok := bot.clients[receivedMessage.ChatID]
 
 		if !ok {
-			logger.Bot().Info("adding new client with id", string(receivedMessage.ChatID))
+			logger.Bot().Info("adding new client with id", strconv.FormatInt(receivedMessage.ChatID, 10))
 
 			ch := bot.onNewClient()
 

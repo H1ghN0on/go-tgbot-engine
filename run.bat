@@ -8,4 +8,8 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo All tests passed. Running the project...
-go run main.go
+go run d:\go_projects\go-tgbot-engine\cmd\example-app
+if %ERRORLEVEL% neq 0 (
+    echo Project execution failed. Exiting.
+    exit /b %ERRORLEVEL%
+)

@@ -68,6 +68,10 @@ func (cmd Command) Equal(other Command) bool {
 	return cmd.Command == other.Command
 }
 
+func (cmd Command) IsValid(other Command) bool {
+	return cmd.Command != ""
+}
+
 func (cmd Command) InSlice(commands []Command) bool {
 	return slices.ContainsFunc(commands, func(command Command) bool {
 		return cmd.Equal(command)

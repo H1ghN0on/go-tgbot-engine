@@ -10,9 +10,9 @@ import (
 	"github.com/H1ghN0on/go-tgbot-engine/bot"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/bot/client"
-	"github.com/H1ghN0on/go-tgbot-engine/globalstate"
+	globalstate "github.com/H1ghN0on/go-tgbot-engine/globalstate/example"
 	"github.com/H1ghN0on/go-tgbot-engine/handlers"
-	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands"
+	cmd "github.com/H1ghN0on/go-tgbot-engine/handlers/commands/example"
 	handlersExample "github.com/H1ghN0on/go-tgbot-engine/handlers/handlers_example"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
 	"github.com/H1ghN0on/go-tgbot-engine/statemachine"
@@ -230,7 +230,7 @@ func main() {
 	}
 
 	exampleBot := bot.NewBot(botAPI, onNewClient, false)
-	exampleBot.AddStaticNotification([]bottypes.Message{{Text: "Ravevenge"}}, bot.OnlyStorm, 10)
+	exampleBot.AddStaticNotification([]bottypes.Message{{Text: "Ravevenge"}}, bot.OnlyMe, 10)
 	exampleBot.AddStaticNotification([]bottypes.Message{{Text: "Crypteque"}}, bot.AllConnectedUsers, 5)
 
 	exampleBot.AddDynamicNotification(timeNotification, bot.OnlyStorm, 10)
