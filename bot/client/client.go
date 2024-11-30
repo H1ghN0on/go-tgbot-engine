@@ -5,9 +5,11 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
+	"golang.org/x/time/rate"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -47,6 +49,7 @@ type Client struct {
 	lastMessage        bottypes.Message
 	messagesToRemove   []bottypes.Message
 	nextCommandToParse bottypes.ParseableCommand
+	rateLimiters       map[int64]*rate.Limiter
 }
 
 func (client Client) GetUserID() int64 {
@@ -321,6 +324,17 @@ func (client *Client) setNextCommandToParse(command bottypes.ParseableCommand) {
 
 func (client *Client) HandleNewMessage(receivedMessage bottypes.Message) {
 
+	if client.rateLimiters[client.chatID] == nil {
+		client.rateLimiters[client.chatID] = rate.NewLimiter(rate.Every(1*time.Minute), 5)
+	}
+
+	if !client.rateLimiters[client.chatID].Allow() {
+		err := fmt.Errorf("too many requests, please try again later")
+		logger.Client().Warning("too many requests from client:", strconv.FormatInt(client.chatID, 10))
+		client.sendErrorMessage(client.chatID, err)
+		return
+	}
+
 	command := client.parseCommand(receivedMessage)
 
 	parsedMessage := bottypes.ParsedMessage{
@@ -387,9 +401,14 @@ func (client *Client) HandleNewMessage(receivedMessage bottypes.Message) {
 }
 
 func NewClient(api *tgbotapi.BotAPI, ch CommandHandler, chatID int64) *Client {
+
+	rateLimiters := make(map[int64]*rate.Limiter)
+	rateLimiters[chatID] = rate.NewLimiter(rate.Every(1*time.Minute), 5)
+
 	return &Client{
-		api:        api,
-		cmdhandler: ch,
-		chatID:     chatID,
+		api:          api,
+		cmdhandler:   ch,
+		chatID:       chatID,
+		rateLimiters: make(map[int64]*rate.Limiter),
 	}
 }
