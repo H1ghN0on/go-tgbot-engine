@@ -14,6 +14,9 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+var rateLimitInterval = 1000 * time.Millisecond
+var maxTokens = 3
+
 type ClientError struct {
 	message string
 }
@@ -49,7 +52,7 @@ type Client struct {
 	lastMessage        bottypes.Message
 	messagesToRemove   []bottypes.Message
 	nextCommandToParse bottypes.ParseableCommand
-	rateLimiters       map[int64]*rate.Limiter
+	rateLimiter        *rate.Limiter
 }
 
 func (client Client) GetUserID() int64 {
@@ -324,15 +327,14 @@ func (client *Client) setNextCommandToParse(command bottypes.ParseableCommand) {
 
 func (client *Client) HandleNewMessage(receivedMessage bottypes.Message) {
 
-	if client.rateLimiters[client.chatID] == nil {
-		client.rateLimiters[client.chatID] = rate.NewLimiter(rate.Every(1*time.Minute), 5)
-	}
-
-	if !client.rateLimiters[client.chatID].Allow() {
+	if !client.rateLimiter.Allow() {
 		err := fmt.Errorf("too many requests, please try again later")
-		logger.Client().Warning("too many requests from client:", strconv.FormatInt(client.chatID, 10))
+		logger.Client().Warning("Too many requests from client:", strconv.FormatInt(client.chatID, 10))
+		logger.Client().Warning("Remaining tokens: %s", fmt.Sprintf("%f", client.rateLimiter.Tokens()))
 		client.sendErrorMessage(client.chatID, err)
 		return
+	} else {
+		logger.Client().Info("Remaining tokens: %s", fmt.Sprintf("%f", client.rateLimiter.Tokens()))
 	}
 
 	command := client.parseCommand(receivedMessage)
@@ -401,14 +403,10 @@ func (client *Client) HandleNewMessage(receivedMessage bottypes.Message) {
 }
 
 func NewClient(api *tgbotapi.BotAPI, ch CommandHandler, chatID int64) *Client {
-
-	rateLimiters := make(map[int64]*rate.Limiter)
-	rateLimiters[chatID] = rate.NewLimiter(rate.Every(1*time.Minute), 5)
-
 	return &Client{
-		api:          api,
-		cmdhandler:   ch,
-		chatID:       chatID,
-		rateLimiters: make(map[int64]*rate.Limiter),
+		api:         api,
+		cmdhandler:  ch,
+		chatID:      chatID,
+		rateLimiter: rate.NewLimiter(rate.Every(rateLimitInterval), maxTokens),
 	}
 }
