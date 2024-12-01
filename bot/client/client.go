@@ -107,7 +107,7 @@ func (client *Client) addToRemoveMessagesQueue(message bottypes.Message) {
 func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.InlineKeyboardMarkup) error {
 	hasText := message.Text != ""
 	hasButtons := len(message.ButtonRows) != 0
-
+	
 	if client.lastMessage.ID == 0 {
 		return fmt.Errorf("keyboard has no message to attach")
 	}

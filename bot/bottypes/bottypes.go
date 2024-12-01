@@ -38,6 +38,7 @@ type ButtonRows struct {
 type Message struct {
 	ID         int
 	ChatID     int64
+	UserName   string
 	Text       string
 	ButtonRows []ButtonRows
 }

@@ -42,20 +42,24 @@ type Bot struct {
 func (client *Bot) parseMessage(update tgbotapi.Update) (bottypes.Message, int64, error) {
 	var receivedMessage bottypes.Message
 	var chatID int64
+	var userName string
 
 	if update.Message != nil {
 
 		chatID = update.Message.Chat.ID
+		userName = update.Message.From.UserName
 
 		receivedMessage = bottypes.Message{
-			ID:     update.Message.MessageID,
-			ChatID: chatID,
-			Text:   update.Message.Text,
+			ID:       update.Message.MessageID,
+			ChatID:   chatID,
+			UserName: userName,
+			Text:     update.Message.Text,
 		}
 
 	} else if update.CallbackQuery != nil {
 
 		chatID = update.CallbackQuery.Message.Chat.ID
+		userName = update.CallbackQuery.From.UserName
 
 		callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 		if _, err := client.api.Request(callback); err != nil {
@@ -63,9 +67,10 @@ func (client *Bot) parseMessage(update tgbotapi.Update) (bottypes.Message, int64
 		}
 
 		receivedMessage = bottypes.Message{
-			ID:     update.CallbackQuery.Message.MessageID,
-			ChatID: chatID,
-			Text:   update.CallbackQuery.Data,
+			ID:       update.CallbackQuery.Message.MessageID,
+			ChatID:   chatID,
+			UserName: userName,
+			Text:     update.CallbackQuery.Data,
 		}
 
 	} else if update.EditedMessage != nil {
