@@ -33,7 +33,8 @@ func configureCommandHandler(sm *statemachine.StateMachine, gs *globalstate.Exam
 		handlersExample.NewStartHandler(gs),
 		handlersExample.NewCheckboxHandler(gs),
 		handlersExample.NewDynamicKeyboardHandler(gs),
-		handlersExample.NewCalendarHandler(gs))
+		handlersExample.NewCalendarHandler(gs),
+		handlersExample.NewParseModeHandler(gs))
 
 	commandHandler := handlers.NewCommandHandler(handlerables, sm)
 	return commandHandler
@@ -43,9 +44,9 @@ func configureStateMachine() *statemachine.StateMachine {
 
 	startState := statemachine.NewState(
 		"start-state",
-		
+
 		cmd.ShowCommandsCommand,
-		
+
 		cmd.StartCommand,
 		cmd.LevelOneCommand,
 		cmd.LevelTwoCommand,
@@ -58,6 +59,9 @@ func configureStateMachine() *statemachine.StateMachine {
 		cmd.CheckboxStartCommand,
 		cmd.DynamicKeyboardStartCommand,
 		cmd.CalendarStartCommand,
+		cmd.ParseModeKeyboardStartCommand,
+
+		// cmd.ParseModeMarkdownV2Command,
 	)
 
 	levelFourState := statemachine.NewState(
@@ -148,18 +152,32 @@ func configureStateMachine() *statemachine.StateMachine {
 		cmd.BackCommandCommand,
 		cmd.NothingnessCommand,
 	)
-	
-	startState.SetAvailableStates(*levelFourState, *keyboardState, *infoState, *checkboxState, *startState, *dynamicKeyboardState, *calendarState)
+
+	parseModeState := statemachine.NewState(
+		"parse-mode-keyboard-state",
+
+		cmd.ParseModeKeyboardStartCommand,
+
+		cmd.ParseModeStartCommand,
+		cmd.ParseModeMarkdownV2Command,
+		cmd.ParseModeHTMLCommand,
+		cmd.ParseModeKeyboardFinishCommand,
+		cmd.BackStateCommand,
+	)
+
+	startState.SetAvailableStates(
+		*levelFourState, *keyboardState, *infoState, *checkboxState, *startState, *dynamicKeyboardState, *calendarState, *parseModeState)
 	levelFourState.SetAvailableStates(*startState)
 	keyboardState.SetAvailableStates(*startState)
 	infoState.SetAvailableStates(*startState)
 	checkboxState.SetAvailableStates(*startState)
 	dynamicKeyboardState.SetAvailableStates(*startState)
 	calendarState.SetAvailableStates(*startState)
+	parseModeState.SetAvailableStates(*startState)
 
 	sm := &statemachine.StateMachine{}
 
-	sm.AddStates(*startState, *levelFourState, *keyboardState, *infoState, *checkboxState, *dynamicKeyboardState, *calendarState)
+	sm.AddStates(*startState, *levelFourState, *keyboardState, *infoState, *checkboxState, *dynamicKeyboardState, *calendarState, *parseModeState)
 
 	err := sm.SetStateByName("start-state")
 	if err != nil {
@@ -202,7 +220,7 @@ func randomTrackNotification() []bottypes.Message {
 
 func main() {
 
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load("../../.env"); err != nil {
 		panic("No .env file found")
 	}
 

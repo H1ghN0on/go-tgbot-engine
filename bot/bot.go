@@ -135,6 +135,7 @@ func (bot *Bot) notificationHandler(notification notificator.Notificationer) {
 	for _, user := range notification.GetUsers() {
 		for _, message := range notification.GetMessages() {
 			message := tgbotapi.NewMessage(user.UserID, message.Text)
+			message.ParseMode = tgbotapi.ModeMarkdownV2
 			bot.api.Send(message)
 		}
 	}

@@ -100,7 +100,6 @@ func (handler *StartHandler) ShowCommandsHandler(params handlers.HandlerParams) 
 	buttonRow2 := bottypes.ButtonRows{
 		Buttons: []bottypes.Button{
 			{ChatID: chatID, Text: "Level 3", Command: cmd.LevelThreeCommand},
-			// {ChatID: chatID, Text: "Create error", Command: "/create_error"},
 		},
 	}
 
@@ -140,7 +139,13 @@ func (handler *StartHandler) ShowCommandsHandler(params handlers.HandlerParams) 
 		},
 	}
 
-	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3, buttonRow4, buttonRow5, buttonRow6, buttonRow7, buttonRow8)
+	buttonRow9 := bottypes.ButtonRows{
+		Buttons: []bottypes.Button{
+			{ChatID: chatID, Text: "Parse Mode", Command: cmd.ParseModeKeyboardStartCommand},
+		},
+	}
+
+	retMessage.ButtonRows = append(retMessage.ButtonRows, buttonRow1, buttonRow2, buttonRow3, buttonRow4, buttonRow5, buttonRow6, buttonRow7, buttonRow8, buttonRow9)
 
 	res.Messages = append(res.Messages, retMessage)
 
