@@ -17,6 +17,14 @@ const (
 	NoParse            ParseCommandType = iota
 )
 
+type MessageParseMode int
+
+const (
+	NoParseMode MessageParseMode = iota
+	MarkdownV2  MessageParseMode = iota
+	HTML        MessageParseMode = iota
+)
+
 type Button struct {
 	ChatID  int64
 	Text    string
@@ -40,6 +48,7 @@ type Message struct {
 	ChatID     int64
 	UserName   string
 	Text       string
+	ParseMode  MessageParseMode
 	ButtonRows []ButtonRows
 }
 
