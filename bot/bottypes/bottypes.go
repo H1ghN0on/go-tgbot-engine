@@ -65,6 +65,19 @@ type Command struct {
 	SkipOnBack  bool
 }
 
+func (mode MessageParseMode) СonvertToAPI() string {
+	switch mode {
+	case MarkdownV2:
+		return "MarkdownV2"
+	case HTML:
+		return "HTML"
+	case NoParseMode:
+	default:
+		return ""
+	}
+	return ""
+}
+
 func (cmd Command) String() string {
 	return cmd.Command
 }

@@ -49,19 +49,6 @@ type Client struct {
 	nextCommandToParse bottypes.ParseableCommand
 }
 
-func convertParseMode(mode bottypes.MessageParseMode) string {
-	switch mode {
-	case bottypes.MarkdownV2:
-		return tgbotapi.ModeMarkdownV2
-	case bottypes.HTML:
-		return tgbotapi.ModeHTML
-	case bottypes.NoParseMode:
-	default:
-		return ""
-	}
-	return ""
-}
-
 func (client Client) GetUserID() int64 {
 	return client.chatID
 }
@@ -128,7 +115,7 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 	if hasText && message.Text != client.lastMessage.Text {
 		if hasButtons {
 			req := tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard)
-			req.ParseMode = convertParseMode(client.lastMessage.ParseMode)
+			req.ParseMode = client.lastMessage.ParseMode.СonvertToAPI()
 			_, err := client.api.Request(req)
 			if err != nil {
 				return err
@@ -136,7 +123,7 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 			return nil
 		} else {
 			req := tgbotapi.NewEditMessageText(client.lastMessage.ChatID, client.lastMessage.ID, message.Text)
-			req.ParseMode = convertParseMode(client.lastMessage.ParseMode)
+			req.ParseMode = client.lastMessage.ParseMode.СonvertToAPI()
 			_, err := client.api.Request(req)
 			if err != nil {
 				return err
@@ -215,7 +202,7 @@ func (client *Client) SendKeyboard(message bottypes.Message) error {
 func (client *Client) SendText(message bottypes.Message) error {
 
 	msg := tgbotapi.NewMessage(client.chatID, message.Text)
-	msg.ParseMode = convertParseMode(message.ParseMode)
+	msg.ParseMode = message.ParseMode.СonvertToAPI()
 	sent, err := client.api.Send(msg)
 	if err != nil {
 		return ClientError{message: "Send message error: " + err.Error()}
@@ -235,7 +222,7 @@ func (client *Client) SendText(message bottypes.Message) error {
 func (client *Client) SendMessage(message bottypes.Message) error {
 
 	msg := tgbotapi.NewMessage(client.chatID, message.Text)
-	msg.ParseMode = convertParseMode(message.ParseMode)
+	msg.ParseMode = message.ParseMode.СonvertToAPI()
 	keyboard, exists := client.PrepareKeyboard(message)
 	if exists {
 		msg.ReplyMarkup = keyboard
@@ -269,6 +256,7 @@ func (client *Client) sendErrorMessage(chatID int64, err error) {
 	sendErr := client.SendMessage(responseMessage)
 	if sendErr != nil {
 		logger.Client().Critical(fmt.Errorf("error text: %q, error: %w", responseMessage.Text, sendErr).Error())
+		panic(sendErr)
 	}
 }
 
@@ -372,6 +360,7 @@ func (client *Client) HandleNewMessage(receivedMessage bottypes.Message) {
 				err := client.SendText(message)
 				if err != nil {
 					logger.Client().Critical(fmt.Errorf("error text:: %q, error: %w", message.Text, err).Error())
+					panic(err)
 				}
 			} else if len(message.ButtonRows) != 0 && response.ContainsTrigger(bottypes.StartKeyboardTrigger) {
 				err := client.SendKeyboard(message)

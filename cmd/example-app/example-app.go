@@ -61,7 +61,6 @@ func configureStateMachine() *statemachine.StateMachine {
 		cmd.CalendarStartCommand,
 		cmd.ParseModeKeyboardStartCommand,
 
-		// cmd.ParseModeMarkdownV2Command,
 	)
 
 	levelFourState := statemachine.NewState(
