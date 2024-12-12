@@ -19,6 +19,13 @@ var LevelTwoCommand bottypes.Command = bottypes.Command{Command: "/level_two", D
 var LevelThreeCommand bottypes.Command = bottypes.Command{Command: "/level_three", Description: "Уровень 3"}
 var BigMessagesCommand bottypes.Command = bottypes.Command{Command: "/big_messages", Description: "Большие сообщения"}
 
+// ParseMode Handler
+var ParseModeStartCommand bottypes.Command = bottypes.Command{Command: "/parse_mode", Description: "Выбор режима для parse mode"}
+var ParseModeKeyboardStartCommand bottypes.Command = bottypes.Command{Command: "/parse_mode_keyboard_start", Description: "Запуск клавиатуры"}
+var ParseModeMarkdownV2Command bottypes.Command = bottypes.Command{Command: "/parse_mode_markdown_v2", Description: "Выбор markdownV2 для parse mode"}
+var ParseModeHTMLCommand bottypes.Command = bottypes.Command{Command: "/parse_mode_html", Description: "Выбор HTML для parse mode"}
+var ParseModeKeyboardFinishCommand bottypes.Command = bottypes.Command{Command: "/parse_mode_keyboard_finish", Description: "Завершение клавиатуры"}
+
 // Checkbox Handler
 var CheckboxStartCommand bottypes.Command = bottypes.Command{Command: "/checkboxes_start", Description: "Запуск чекбоксов"}
 var CheckboxFirstCommand bottypes.Command = bottypes.Command{Command: "/checkboxes_first", Description: "Установка первого чекбокса"}
@@ -122,4 +129,10 @@ var Commands = []bottypes.Command{
 	CalendarSetDayCommand,
 	CalendarSetTimeCommand,
 	CalendarFinishCommand,
+
+	ParseModeStartCommand,
+	ParseModeKeyboardStartCommand,
+	ParseModeMarkdownV2Command,
+	ParseModeHTMLCommand,
+	ParseModeKeyboardFinishCommand,
 }

@@ -17,6 +17,14 @@ const (
 	NoParse            ParseCommandType = iota
 )
 
+type MessageParseMode int
+
+const (
+	NoParseMode MessageParseMode = iota
+	MarkdownV2  MessageParseMode = iota
+	HTML        MessageParseMode = iota
+)
+
 type Button struct {
 	ChatID  int64
 	Text    string
@@ -40,6 +48,7 @@ type Message struct {
 	ChatID     int64
 	UserName   string
 	Text       string
+	ParseMode  MessageParseMode
 	ButtonRows []ButtonRows
 }
 
@@ -55,6 +64,19 @@ type Command struct {
 	Description string
 	Data        string
 	SkipOnBack  bool
+}
+
+func (mode MessageParseMode) СonvertToAPI() string {
+	switch mode {
+	case MarkdownV2:
+		return "MarkdownV2"
+	case HTML:
+		return "HTML"
+	case NoParseMode:
+	default:
+		return ""
+	}
+	return ""
 }
 
 func (cmd Command) String() string {

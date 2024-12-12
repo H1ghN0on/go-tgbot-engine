@@ -114,13 +114,17 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 
 	if hasText && message.Text != client.lastMessage.Text {
 		if hasButtons {
-			_, err := client.api.Request(tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard))
+			req := tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard)
+			req.ParseMode = client.lastMessage.ParseMode.СonvertToAPI()
+			_, err := client.api.Request(req)
 			if err != nil {
 				return err
 			}
 			return nil
 		} else {
-			_, err := client.api.Request(tgbotapi.NewEditMessageText(client.lastMessage.ChatID, client.lastMessage.ID, message.Text))
+			req := tgbotapi.NewEditMessageText(client.lastMessage.ChatID, client.lastMessage.ID, message.Text)
+			req.ParseMode = client.lastMessage.ParseMode.СonvertToAPI()
+			_, err := client.api.Request(req)
 			if err != nil {
 				return err
 			}
@@ -198,7 +202,7 @@ func (client *Client) SendKeyboard(message bottypes.Message) error {
 func (client *Client) SendText(message bottypes.Message) error {
 
 	msg := tgbotapi.NewMessage(client.chatID, message.Text)
-
+	msg.ParseMode = message.ParseMode.СonvertToAPI()
 	sent, err := client.api.Send(msg)
 	if err != nil {
 		return ClientError{message: "Send message error: " + err.Error()}
@@ -209,6 +213,7 @@ func (client *Client) SendText(message bottypes.Message) error {
 		ChatID:     sent.Chat.ID,
 		Text:       sent.Text,
 		ButtonRows: message.ButtonRows,
+		ParseMode:  message.ParseMode,
 	}
 
 	return nil
@@ -217,6 +222,7 @@ func (client *Client) SendText(message bottypes.Message) error {
 func (client *Client) SendMessage(message bottypes.Message) error {
 
 	msg := tgbotapi.NewMessage(client.chatID, message.Text)
+	msg.ParseMode = message.ParseMode.СonvertToAPI()
 	keyboard, exists := client.PrepareKeyboard(message)
 	if exists {
 		msg.ReplyMarkup = keyboard
@@ -232,6 +238,7 @@ func (client *Client) SendMessage(message bottypes.Message) error {
 		ChatID:     sent.Chat.ID,
 		Text:       sent.Text,
 		ButtonRows: message.ButtonRows,
+		ParseMode:  client.lastMessage.ParseMode,
 	}
 
 	return nil
@@ -248,6 +255,7 @@ func (client *Client) sendErrorMessage(chatID int64, err error) {
 
 	sendErr := client.SendMessage(responseMessage)
 	if sendErr != nil {
+		logger.Client().Critical(fmt.Errorf("error text: %q, error: %w", responseMessage.Text, sendErr).Error())
 		panic(sendErr)
 	}
 }
@@ -351,6 +359,7 @@ func (client *Client) HandleNewMessage(receivedMessage bottypes.Message) {
 			if message.Text != "" && len(message.ButtonRows) == 0 {
 				err := client.SendText(message)
 				if err != nil {
+					logger.Client().Critical(fmt.Errorf("error text:: %q, error: %w", message.Text, err).Error())
 					panic(err)
 				}
 			} else if len(message.ButtonRows) != 0 && response.ContainsTrigger(bottypes.StartKeyboardTrigger) {
