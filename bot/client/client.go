@@ -7,72 +7,11 @@ import (
 	"strings"
 
 	"github.com/H1ghN0on/go-tgbot-engine/bot/bottypes"
+	messageСonverter "github.com/H1ghN0on/go-tgbot-engine/bot/messageconverter"
 	"github.com/H1ghN0on/go-tgbot-engine/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
-
-type messageType int
-
-const (
-	NewMessage                  messageType = iota
-	NewEditMessageText          messageType = iota
-	NewEditMessageTextAndMarkup messageType = iota
-	NewInlineKeyboardButtonData messageType = iota
-)
-
-
-
-func (client Client) NewApiMessage(message bottypes.Message, messageType messageType, options ...bottypes.Button) interface{} {
-
-	var commandData bottypes.Button
-	if len(options) > 0 {
-		commandData = options[0]
-	}
-
-	keyboard, exists := client.PrepareKeyboard(message)
-
-	if !exists {
-		return ClientError{message: "Send keyboard error: no keyboard"}
-	}
-
-	switch messageType {
-	case NewMessage:
-		return tgbotapi.MessageConfig{
-			BaseChat: tgbotapi.BaseChat{
-				ChatID:           message.ChatID,
-				ReplyToMessageID: 0,
-			},
-			Text:                  message.Text,
-			DisableWebPagePreview: false,
-		}
-	case NewEditMessageText:
-		return tgbotapi.EditMessageTextConfig{
-			BaseEdit: tgbotapi.BaseEdit{
-				ChatID:    message.ChatID,
-				MessageID: message.ID,
-			},
-			Text: message.Text,
-		}
-	case NewEditMessageTextAndMarkup:
-		return tgbotapi.EditMessageTextConfig{
-			BaseEdit: tgbotapi.BaseEdit{
-				ChatID:      message.ChatID,
-				MessageID:   message.ID,
-				ReplyMarkup: &keyboard,
-			},
-			Text: message.Text,
-		}
-	case NewInlineKeyboardButtonData:
-		data := string(commandData.Command.Command + commandData.Command.Data)
-		return tgbotapi.InlineKeyboardButton{
-			Text:         message.Text,
-			CallbackData: &data,
-		}
-	default:
-		return ""
-	}
-}
 
 type ClientError struct {
 	message string
@@ -173,19 +112,16 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 	if client.lastMessage.ID == 0 {
 		return fmt.Errorf("keyboard has no message to attach")
 	}
-
 	if hasText && message.Text != client.lastMessage.Text {
 		if hasButtons {
-			req := tgbotapi.NewEditMessageTextAndMarkup(client.lastMessage.ChatID, client.lastMessage.ID, message.Text, keyboard)
-			req.ParseMode = client.lastMessage.ParseMode.СonvertToAPI()
+			req := messageСonverter.NewEditMessageTextAndMarkup(message, client.lastMessage)
 			_, err := client.api.Request(req)
 			if err != nil {
 				return err
 			}
 			return nil
 		} else {
-			req := tgbotapi.NewEditMessageText(client.lastMessage.ChatID, client.lastMessage.ID, message.Text)
-			req.ParseMode = client.lastMessage.ParseMode.СonvertToAPI()
+			req := messageСonverter.NewEditMessageText(message, client.lastMessage)
 			_, err := client.api.Request(req)
 			if err != nil {
 				return err
@@ -205,35 +141,9 @@ func (client *Client) SetupKeyboard(message bottypes.Message, keyboard tgbotapi.
 	return fmt.Errorf("keyboard setup error")
 }
 
-func (client *Client) PrepareKeyboard(message bottypes.Message) (tgbotapi.InlineKeyboardMarkup, bool) {
-	var keyboard tgbotapi.InlineKeyboardMarkup
-
-	if len(message.ButtonRows) == 0 {
-		return tgbotapi.InlineKeyboardMarkup{}, false
-	}
-
-	if len(message.ButtonRows) > 0 {
-		var buttonRows [][]tgbotapi.InlineKeyboardButton
-		for _, buttonRow := range message.ButtonRows {
-			var buttons []tgbotapi.InlineKeyboardButton
-			for _, button := range buttonRow.Buttons {
-				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command+button.Command.Data)))
-			}
-			for _, button := range buttonRow.CheckboxButtons {
-				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(button.Command.Command)))
-			}
-
-			buttonRows = append(buttonRows, buttons)
-		}
-
-		keyboard = tgbotapi.NewInlineKeyboardMarkup(buttonRows...)
-	}
-
-	return keyboard, true
-}
-
 func (client *Client) SendKeyboard(message bottypes.Message) error {
-	keyboard, exists := client.PrepareKeyboard(message)
+
+	keyboard, exists := messageСonverter.PrepareKeyboard(message)
 
 	if !exists {
 		return ClientError{message: "Send keyboard error: no keyboard"}
@@ -263,12 +173,8 @@ func (client *Client) SendKeyboard(message bottypes.Message) error {
 
 func (client *Client) SendText(message bottypes.Message) error {
 
-	msg, ok := client.NewApiMessage(message, NewMessage).(tgbotapi.MessageConfig)
-	if !ok {
-		logger.Client().Critical("Error: makeAPImsg did not return a tgbotapi.MessageConfig")
-	}
-	// msg := tgbotapi.NewMessage(client.chatID, message.Text)
-	msg.ParseMode = message.ParseMode.СonvertToAPI()
+	msg := messageСonverter.NewMessage(message)
+
 	sent, err := client.api.Send(msg)
 	if err != nil {
 		return ClientError{message: "Send message error: " + err.Error()}
@@ -287,9 +193,8 @@ func (client *Client) SendText(message bottypes.Message) error {
 
 func (client *Client) SendMessage(message bottypes.Message) error {
 
-	msg := tgbotapi.NewMessage(client.chatID, message.Text)
-	msg.ParseMode = message.ParseMode.СonvertToAPI()
-	keyboard, exists := client.PrepareKeyboard(message)
+	msg := messageСonverter.NewMessage(message)
+	keyboard, exists := messageСonverter.PrepareKeyboard(message)
 	if exists {
 		msg.ReplyMarkup = keyboard
 	}

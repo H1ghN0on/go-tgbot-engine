@@ -12,6 +12,12 @@ func Bot() *Logger {
 	return logger
 }
 
+func MessageConverter() *Logger {
+	logger := GlobalLogger
+	logger.category = "MessageConverter"
+	return logger
+}
+
 func Client() *Logger {
 	logger := GlobalLogger
 	logger.category = "Client"
